@@ -14,8 +14,8 @@ import {usePolicy} from './Assessments';
 import {QuestionList} from './QuestionEditor';
 import {KIND_LABEL,toIso,toLocal,type Assessment,type AssessmentRev,type DraftContent,type Question} from './types';
 
-const toContent=(r:AssessmentRev):DraftContent=>({title:r.title,instructions:r.instructions,category_key:r.category_key??'',period:r.period??'',max_points:String(r.max_points??0),available_from:toLocal(r.available_from),deadline:toLocal(r.deadline),allow_late:r.allow_late,max_attempts:r.max_attempts,score_rule:r.score_rule,include_in_grade:r.include_in_grade,anchor_node_id:r.anchor_node_id,questions:r.questions});
-const toPayload=(v:DraftContent,counter:number)=>({expected_counter:counter,title:v.title,instructions:v.instructions,category_key:v.category_key||null,period:v.period||null,max_points:v.max_points||'0',available_from:toIso(v.available_from),deadline:toIso(v.deadline),allow_late:v.allow_late,max_attempts:v.max_attempts,score_rule:v.score_rule,include_in_grade:v.include_in_grade,anchor_node_id:v.anchor_node_id,questions:v.questions.map(q=>({...q,points:String(q.points||0)}))});
+const toContent=(r:AssessmentRev):DraftContent=>({title:r.title,instructions:r.instructions,category_key:r.category_key??'',period:r.period??'',max_points:String(r.max_points??0),available_from:toLocal(r.available_from),deadline:toLocal(r.deadline),allow_late:r.allow_late,requires_file:r.requires_file??true,max_attempts:r.max_attempts,score_rule:r.score_rule,include_in_grade:r.include_in_grade,anchor_node_id:r.anchor_node_id,questions:r.questions});
+const toPayload=(v:DraftContent,counter:number)=>({expected_counter:counter,title:v.title,instructions:v.instructions,category_key:v.category_key||null,period:v.period||null,max_points:v.max_points||'0',available_from:toIso(v.available_from),deadline:toIso(v.deadline),allow_late:v.allow_late,requires_file:v.requires_file,max_attempts:v.max_attempts,score_rule:v.score_rule,include_in_grade:v.include_in_grade,anchor_node_id:v.anchor_node_id,questions:v.questions.map(q=>({...q,points:String(q.points||0)}))});
 
 export function AssessmentEditorPage(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
@@ -147,6 +147,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
     <fieldset><legend>For</legend><p className="muted">{sectionNames}. Leave all unchecked for every section.</p>
       {offering.sections.map(s=><label className="inline" key={s.id}><input type="checkbox" checked={sections.includes(s.id)} onChange={e=>{const ids=e.target.checked?[...sections,s.id]:sections.filter(x=>x!==s.id);setSections(ids);void settings({section_ids:ids})}}/> {s.name}</label>)}</fieldset>
     {quiz?<p><strong>Points</strong><br/>{total} (from the questions)</p>:<label>Points<input type="number" min="0" step="0.5" value={v.max_points} onChange={e=>set({max_points:e.target.value})}/></label>}
+    {assessment.kind==='activity'&&<label>Students turn in<select value={v.requires_file?'file':'none'} onChange={e=>set({requires_file:e.target.value==='file'})}><option value="file">A PDF file</option><option value="none">Nothing, they mark it done</option></select></label>}
     {interactive&&<label>Due<input type="datetime-local" value={v.deadline} onChange={e=>set({deadline:e.target.value})}/></label>}
     <label>Topic<select value={v.anchor_node_id??''} onChange={e=>set({anchor_node_id:e.target.value||null})}><option value="">No topic</option>{nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>
     <label className="inline"><input type="checkbox" checked={v.include_in_grade} onChange={e=>set({include_in_grade:e.target.checked})}/> Counts toward the grade</label>
@@ -155,7 +156,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
       <label>Grading period<select value={v.period} onChange={e=>set({period:e.target.value})}><option value="">Choose…</option>{(policy?.periods??[]).map(p=><option key={p.key} value={p.key}>{p.label}</option>)}</select></label></>}
     {v.include_in_grade&&!policy&&<p className="warn" role="status">No confirmed grading policy yet. Publish a syllabus with one first, or turn off “Counts toward the grade”.</p>}
     <details className="more"><summary>More options</summary>
-      {interactive&&<label>Opens<input type="datetime-local" value={v.available_from} onChange={e=>set({available_from:e.target.value})}/></label>}
+      {interactive&&<label>Opens (students cannot see it before then)<input type="datetime-local" value={v.available_from} onChange={e=>set({available_from:e.target.value})}/></label>}
       {interactive&&<label className="inline"><input type="checkbox" checked={v.allow_late} onChange={e=>set({allow_late:e.target.checked})}/> Accept late work after the deadline{assessment.kind==='activity'?' (first submission only; replacing work later needs your permission)':''}</label>}
       {quiz&&<>
         <label>Attempts allowed<select value={v.max_attempts} disabled={locked} onChange={e=>set({max_attempts:Number(e.target.value)})}>{[1,2,3,4,5,10].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
@@ -176,7 +177,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
   const assignButton=<button className="primary" disabled={needsReview&&!reviewed} title={needsReview&&!reviewed?'Mark the quiz as reviewed first':undefined} onClick={publish}>{assignLabel}</button>;
   const blocked=needsReview&&!reviewed;
   const tomorrow=toLocal(new Date(new Date().setHours(8,0,0,0)+864e5).toISOString());
-  /** Schedule = set the opening time and assign. Students see it as "not open yet" until then. Only quizzes and activities have an opening time. */
+  /** Schedule = set the opening time and assign. Students do not see it until then. Only quizzes and activities have an opening time. */
   async function schedule(e:FormEvent<HTMLFormElement>){
     e.preventDefault();const when=String(new FormData(e.currentTarget).get('when'));
     if(new Date(when).getTime()<=Date.now()){setMessage('Choose a time in the future.');return}
@@ -211,7 +212,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
       {side}
     </div>
     {scheduling&&<Dialog title="Schedule" onClose={()=>setScheduling(false)}><form onSubmit={schedule}>
-      <p>Students will see this listed as “not open yet” and can start it from the time you choose.</p>
+      <p>Students will not see this at all until the time you choose. You still see it, as scheduled.</p>
       <label>Opens<input name="when" type="datetime-local" required defaultValue={v.available_from||tomorrow}/></label>
       <div className="actions"><button type="button" onClick={()=>setScheduling(false)}>Cancel</button><button className="primary">Schedule</button></div></form></Dialog>}
   </div>;

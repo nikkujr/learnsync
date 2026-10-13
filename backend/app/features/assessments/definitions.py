@@ -65,7 +65,7 @@ def rev_view(db, rev):
             "title": rev.title, "instructions": rev.instructions,
             "category_key": rev.category_key, "period": rev.period, "max_points": rev.max_points,
             "available_from": rev.available_from, "deadline": rev.deadline,
-            "allow_late": rev.allow_late, "max_attempts": rev.max_attempts,
+            "allow_late": rev.allow_late, "requires_file": rev.requires_file, "max_attempts": rev.max_attempts,
             "score_rule": rev.score_rule, "include_in_grade": rev.include_in_grade,
             "anchor_node_id": rev.anchor_node_id, "updated_at": rev.updated_at,
             "published_at": rev.published_at, "ai_generated": rev.ai_generated,
@@ -131,7 +131,7 @@ def start_draft(db, actor, assessment):
         assessment_id=assessment.id, version=version, created_by=actor.id, title=base.title,
         instructions=base.instructions, category_key=base.category_key, period=base.period,
         max_points=base.max_points, available_from=base.available_from, deadline=base.deadline,
-        allow_late=base.allow_late, max_attempts=base.max_attempts, score_rule=base.score_rule,
+        allow_late=base.allow_late, requires_file=base.requires_file, max_attempts=base.max_attempts, score_rule=base.score_rule,
         include_in_grade=base.include_in_grade, anchor_node_id=base.anchor_node_id,
         ai_generated=base.ai_generated, ai_language=base.ai_language)   # a new draft needs a fresh review
     db.add(draft)
@@ -150,7 +150,7 @@ def save_draft(db, actor, offering, assessment, data):
             db, offering, ["draft", "published"]):
         fail(422, "anchor_invalid", "Choose a chapter or topic from this subject's syllabus.")
     for field in ("title", "instructions", "category_key", "period", "max_points",
-                  "available_from", "deadline", "allow_late", "max_attempts", "score_rule",
+                  "available_from", "deadline", "allow_late", "requires_file", "max_attempts", "score_rule",
                   "include_in_grade"):
         setattr(draft, field, getattr(data, field))
     draft.anchor_node_id = str(data.anchor_node_id) if data.anchor_node_id else None

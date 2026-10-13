@@ -168,7 +168,7 @@ def test_todo_order_puts_open_work_first_and_never_offers_upcoming_work_as_the_n
     make_manual(graded, "activity", "Opens last", points="10", category_key="activity", available_from=iso(6), deadline=iso(9))
     make_manual(graded, "activity", "Opens soon", points="10", category_key="activity", available_from=iso(2), deadline=iso(20))
     page = graded["st1"].get("/api/dashboard/student/todo").json()
-    assert [w["title"] for w in page["todo"]] == ["Due first", "Later due", "No deadline", "Opens soon", "Opens last"]
+    assert [w["title"] for w in page["todo"]] == ["Due first", "Later due", "No deadline"]      # scheduled work is not listed until it opens
     assert all("late_allowed" in w for w in page["todo"])
     data = home(graded)
     assert data["next_step"]["title"] in ("Due first",) or data["next_step"]["type"] == "lesson"

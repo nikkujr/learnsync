@@ -16,10 +16,17 @@ from .results import latest_release, student_results
 INTERACTIVE = {"online_quiz", "activity"}
 
 
+def scheduled(rev):
+    """Work whose opening time is still ahead is invisible to students: not listed, not openable."""
+    return bool(rev.available_from and rev.available_from > now())
+
+
 def student_assessment(db, offering, enrollment, assessment_id, kind=None):
     a = db.get(Assessment, assessment_id)
     rev = revision(db, a.id, "published") if a and a.offering_id == offering.id \
         and not a.archived else None
+    if rev and scheduled(rev):
+        rev = None                      # scheduled work does not exist for students yet
     if not rev or not targeted(section_ids_of(db, a.id), enrollment) \
             or (kind and a.kind != kind) or a.kind not in INTERACTIVE:
         fail(404, "not_found", "Assessment not found.")
@@ -37,7 +44,8 @@ def item_view(db, student, enrollment, a, rev):
     out = {"id": a.id, "kind": a.kind, "title": rev.title, "instructions": rev.instructions,
            "available_from": rev.available_from, "deadline": rev.deadline,
            "allow_late": rev.allow_late, "max_points": rev.max_points,
-           "anchor_node_id": rev.anchor_node_id, "result": result_view(db, a.id, student.id)}
+           "anchor_node_id": rev.anchor_node_id, "result": result_view(db, a.id, student.id),
+           "requires_file": rev.requires_file}
     if a.kind == "online_quiz":
         used = used_attempts(db, a.id, student.id)
         current = db.scalar(select(QuizAttempt.id).where(
@@ -60,6 +68,8 @@ def item_view(db, student, enrollment, a, rev):
     else:
         allowed, late, _, reason = submissions.eligibility(db, rev, a.id, student.id, at)
         subs = submissions.versions(db, a.id, student.id)
+        if not rev.requires_file:
+            allowed = allowed and not subs                           # nothing to replace: it is done once
         out.update(submissions=[submissions.submission_view(db, s) for s in subs],
                    can_submit=allowed, would_be_late=late)
         out["state"] = ("not_open" if reason == "not_open" else "submitted"
@@ -105,7 +115,7 @@ def listing(db, student, offering, enrollment):
     out = []
     for a in rows:
         rev = revision(db, a.id, "published")
-        if rev and targeted(section_ids_of(db, a.id), enrollment):
+        if rev and not scheduled(rev) and targeted(section_ids_of(db, a.id), enrollment):
             out.append(item_view(db, student, enrollment, a, rev))
     return sorted(out, key=sort_key)
 

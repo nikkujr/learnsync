@@ -41,7 +41,7 @@ try{
   check('the Assign menu offers Schedule and Save draft',await page.getByRole('button',{name:'Schedule…'}).count()===1&&await page.getByRole('button',{name:'Save draft and close'}).count()===1);
   await shot(page,'schedule-menu',false);
   await page.getByRole('button',{name:'Schedule…'}).click();await page.locator('dialog[open]').waitFor();
-  check('the Schedule dialog says students see it as not open yet',(await page.locator('dialog').innerText()).includes('not open yet'));
+  check('the Schedule dialog says students will not see it until then',(await page.locator('dialog').innerText()).includes('will not see this at all'));
   await page.locator('dialog input[name=when]').fill('2099-01-05T08:00');
   await page.locator('dialog').getByRole('button',{name:'Schedule',exact:true}).click();
   await page.waitForURL(/\/classwork(\?type=\w+)?$/);
@@ -53,9 +53,11 @@ try{
   const tabs=await S1.getByRole('navigation',{name:'To-do sections'}).getByRole('link').allInnerTexts();
   check('To-do has the tabs Assigned, Missing and Done',['Assigned','Missing','Done'].every(t=>tabs.some(x=>x.startsWith(t))),tabs.join(','));
   const text=await S1.locator('main').innerText();
-  check('the scheduled activity is listed under Later and says when it opens',text.includes('Later')&&text.includes('Scheduled activity')&&/opens/.test(text));
+  const studentList=(await call(S1,'GET',`/learn/offerings/${O}/assessments`)).data.map(i=>i.title);
+  check('scheduled work is not in the student To-do or list until it opens',!text.includes('Scheduled activity')&&!studentList.includes('Scheduled activity'),studentList.join(','));
+  check('the teacher still sees the scheduled activity in Classwork',(await call(page,'GET',`/teach/offerings/${O}/assessments`)).data.some(a=>a.published?.title==='Scheduled activity'));
   await S1.getByRole('link',{name:/^Missing/}).click();await S1.waitForLoadState('networkidle');
-  check('Missing explains it is for late work that is still accepted',(await S1.locator('main').innerText()).includes('late'));
+  check('Missing explains itself (late work still accepted) or says the student is up to date',/late|up to date/.test(await S1.locator('main').innerText()));
   await shot(S1,'todo-missing',false);
   check('axe finds no violations on the To-do page',(await axe(S1)).length===0);
 
@@ -81,6 +83,27 @@ try{
   const fcal=await newPage(browser,{state:F});await fcal.goto('/faculty/calendar');await fcal.getByRole('heading',{name:'Calendar',exact:true}).waitFor();await fcal.waitForLoadState('networkidle');
   check('the teacher calendar opens and has no axe violations',(await axe(fcal)).length===0);
   await shot(fcal,'calendar-faculty',false);
+
+  // ---- E: an activity with nothing to upload is turned in by marking it done
+  const rid=await mk('activity','Reflection note');
+  const rp=await newPage(browser,{state:F});
+  await rp.goto(`/faculty/offerings/${O}/assessments/${rid}/edit`);await rp.waitForLoadState('networkidle');
+  await rp.getByLabel('Students turn in').selectOption('none');
+  await rp.getByLabel('Grading category').selectOption({label:'Activities (50%)'});await rp.getByLabel('Grading period').selectOption({label:'Midterm'});
+  await rp.getByLabel('Points',{exact:true}).fill('10');await rp.getByLabel('Due').fill('2099-02-10T17:00');await rp.waitForTimeout(1800);
+  await rp.getByRole('button',{name:'Assign',exact:true}).click();await rp.waitForURL(/\/classwork(\?type=\w+)?$/);
+  check('the activity is published as one that needs no file',(await call(rp,'GET',`/teach/offerings/${O}/assessments/${rid}`)).data.published?.requires_file===false);
+  await S1.goto(`/student/offerings/${O}/classwork?type=activity`);await S1.waitForLoadState('networkidle');
+  await S1.getByRole('link',{name:'Reflection note',exact:true}).click();await S1.waitForLoadState('networkidle');
+  await S1.getByRole('button',{name:'Mark as done'}).waitFor();
+  check('the work page offers Mark as done and no file upload',await S1.getByRole('button',{name:'Mark as done'}).count()===1&&await S1.locator('input[type=file]').count()===0);
+  await S1.getByLabel('Private comment to your teacher').fill('Finished in class');
+  await S1.getByRole('button',{name:'Mark as done'}).click();await S1.getByText('Marked as done. Your teacher can see it now.').first().waitFor();
+  check('after marking it done the student sees it turned in and cannot do it twice',await S1.getByRole('button',{name:'Mark as done'}).count()===0&&(await S1.locator('aside[aria-label="Your work"]').innerText()).includes('Turned in'));
+  check('axe finds no violations on the mark-as-done page',(await axe(S1)).length===0);
+  await rp.goto(`/faculty/offerings/${O}/assessments/${rid}/scores`);await rp.waitForLoadState('networkidle');await rp.waitForTimeout(500);
+  check('the teacher sees the work as marked done, with the comment, and nothing to preview',(await rp.locator('.grade-sub').innerText()).includes('Marked as done')&&(await rp.locator('.grade-sub').innerText()).includes('Finished in class')&&await rp.locator('iframe.file-frame').count()===0);
+  await shot(rp,'grading-marked-done',false);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

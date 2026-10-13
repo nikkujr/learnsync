@@ -44,10 +44,10 @@ def open_permission(db, assessment_id, student_id, at):
 
 
 def submission_view(db, s):
-    file = db.get(StoredFile, s.file_id)
+    file = db.get(StoredFile, s.file_id) if s.file_id else None
     return {"version": s.version, "submitted_at": s.submitted_at, "is_late": s.is_late,
-            "note": s.note, "file": {"id": file.id, "name": file.original_name,
-                                     "size": file.size}}
+            "note": s.note, "marked_done": file is None,
+            "file": {"id": file.id, "name": file.original_name, "size": file.size} if file else None}
 
 
 def eligibility(db, rev, assessment_id, student_id, at):
@@ -66,6 +66,8 @@ def eligibility(db, rev, assessment_id, student_id, at):
 
 def submit(db, student, assessment, upload, note):
     rev = revision(db, assessment.id, "published")
+    if not rev.requires_file:
+        fail(422, "no_file_needed", "This activity is turned in by marking it done, not by uploading a file.")
     student_lock(db, assessment.id, student.id)
     at = now()
     allowed, late, permission, reason = eligibility(db, rev, assessment.id, student.id, at)
@@ -80,6 +82,29 @@ def submit(db, student, assessment, upload, note):
     row = ActivitySubmission(assessment_id=assessment.id, revision_id=rev.id,
                              student_id=student.id, version=number, file_id=file.id,
                              note=note[:2000], is_late=late)
+    db.add(row)
+    db.flush()
+    record_event(db, student.id, assessment.offering_id, "activity_submitted", assessment.id, row.id)
+    if permission:
+        permission.consumed_at = at
+    db.commit()
+    return row
+
+
+def mark_done(db, student, assessment, note):
+    """Turning in an activity that needs no file: one record, no resubmission. It counts as turned in, never as a score."""
+    rev = revision(db, assessment.id, "published")
+    if rev.requires_file:
+        fail(422, "file_required", "This activity is turned in by uploading a PDF.")
+    student_lock(db, assessment.id, student.id)
+    at = now()
+    allowed, late, permission, _ = eligibility(db, rev, assessment.id, student.id, at)
+    if latest(db, assessment.id, student.id) is not None:
+        fail(409, "already_done", "You already marked this as done.")
+    if not allowed:
+        fail(409, "closed", "The deadline has passed. Ask your teacher if you need to turn it in.")
+    row = ActivitySubmission(assessment_id=assessment.id, revision_id=rev.id, student_id=student.id,
+                             version=1, file_id=None, note=note[:2000], is_late=late)
     db.add(row)
     db.flush()
     record_event(db, student.id, assessment.offering_id, "activity_submitted", assessment.id, row.id)

@@ -198,3 +198,49 @@ def test_a_submitted_pdf_can_be_previewed_by_its_owner_and_teacher_only(db, grad
     assert TestClient(app).get(url).status_code == 401
     other = Api(make_account(db, "preview-sub-other@example.com", "faculty").email)
     assert other.get(url).status_code == 404
+
+
+# ---------------- scheduled work is hidden; activities without a file ----------------
+
+def test_scheduled_work_is_invisible_to_students_until_it_opens(db, graded):
+    aid = make_manual(graded, "activity", "Opens next week", points="10", category_key="activity",
+                      available_from=iso(24 * 7), deadline=iso(24 * 9))
+    st1, fac = graded["st1"], graded["fac"]
+    assert aid not in [i["id"] for i in st1.get(la(graded, "/assessments")).json()]
+    assert aid not in [w["assessment_id"] for w in st1.get("/api/dashboard/student/todo").json()["todo"]]
+    assert submit_pdf(st1, graded, aid).status_code == 404                     # not even by a direct address
+    assert aid in [a["id"] for a in fac.get(a_(graded)).json()]                # the teacher still sees it
+    rev = db.scalar(select(AssessmentRevision).where(
+        AssessmentRevision.assessment_id == uuid.UUID(aid), AssessmentRevision.state == "published"))
+    rev.available_from = past()
+    db.commit()
+    assert aid in [i["id"] for i in st1.get(la(graded, "/assessments")).json()]   # it appears once it opens
+    assert submit_pdf(st1, graded, aid).status_code == 201
+
+
+def a_(c):
+    return a(c, "")
+
+
+def test_an_activity_can_be_turned_in_by_marking_it_done(graded):
+    aid = make_manual(graded, "activity", "Reflection", points="10", category_key="activity",
+                      requires_file=False, deadline=iso(24))
+    st1, st2, fac = graded["st1"], graded["st2"], graded["fac"]
+    item = next(i for i in st1.get(la(graded, "/assessments")).json() if i["id"] == aid)
+    assert item["requires_file"] is False and item["state"] == "available" and item["can_submit"] is True
+    assert submit_pdf(st1, graded, aid).json()["error"]["code"] == "no_file_needed"      # an upload is refused
+    done = st1.post(la(graded, f"/assessments/{aid}/mark-done"), {"note": "Done in class"})
+    assert done.status_code == 201 and done.json()["marked_done"] is True and done.json()["file"] is None
+    item = next(i for i in st1.get(la(graded, "/assessments")).json() if i["id"] == aid)
+    assert item["state"] == "submitted" and item["can_submit"] is False and item["bucket"] == "awaiting"
+    again = st1.post(la(graded, f"/assessments/{aid}/mark-done"), {})
+    assert again.status_code == 409 and again.json()["error"]["code"] == "already_done"
+    row = rows(graded, aid)
+    assert row["s1"]["versions"] == 1 and row["s1"]["latest"]["marked_done"] is True and row["s1"]["latest"]["note"] == "Done in class"
+    assert row["s2"]["latest"] is None and row["s1"]["score"] is None                  # done is never a score
+    assert score(graded, aid, graded["students"][0], 9).status_code == 200            # the teacher grades it as usual
+    assert st2.get(la(graded, "/assessments")).status_code == 200
+    # an ordinary activity cannot be marked done
+    plain = make_manual(graded, "activity", "Needs a PDF", points="10", category_key="activity", deadline=iso(24))
+    assert st1.post(la(graded, f"/assessments/{plain}/mark-done"), {}).json()["error"]["code"] == "file_required"
+    assert fac.get(a(graded, f"/{aid}")).json()["published"]["requires_file"] is False

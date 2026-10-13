@@ -44,3 +44,5 @@ A file page shows the PDF in a frame or the picture inline (never anything else)
 - Student work pages are two columns: the task, then a Your work card.
 - Calendar (`/student/calendar`, `/faculty/calendar`, drawer entry under To-do / To review): a month grid of due work (students: their open, submitted and retryable work; teachers: published work across their open classes), each entry opens the work; on phones it is a day-by-day list of only the days that have something.
 - Classwork: a left-hand topic list (`?topic=`), and in Reorder mode lessons can be dragged onto each other as well as moved with the arrow buttons.
+- Scheduled work (an opening time in the future) is invisible to students until it opens; teachers see it. An activity can be set to "Students turn in: Nothing, they mark it done": the student gets a Mark as done button and an optional private comment, once; the teacher sees "Marked as done" and grades it as usual.
+- The Grades tab is a students-by-work grid: a person cell (avatar, name, section), column headers with the title, "Out of N" and the category, a read-first view and Edit scores.

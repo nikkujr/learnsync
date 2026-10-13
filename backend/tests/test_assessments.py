@@ -269,7 +269,7 @@ def test_availability_window_and_late_policy(db, graded):
     st1 = graded["st1"]
     future = make_quiz(graded, title="Opens later", available_from=iso(5), deadline=iso(10))
     early = start(st1, graded, future["aid"])
-    assert early.status_code == 409 and early.json()["error"]["code"] == "not_open"
+    assert early.status_code == 404                              # scheduled work does not exist for students yet
     # a deadline that has passed blocks new attempts unless late work is allowed
     quiz = make_quiz(graded, title="Due soon", deadline=iso(1))
     late = make_quiz(graded, title="Late ok", deadline=iso(1), allow_late=True)
@@ -284,7 +284,7 @@ def test_availability_window_and_late_policy(db, graded):
     assert closed.status_code == 409 and closed.json()["error"]["code"] == "closed"
     assert start(st1, graded, late["aid"]).status_code == 201
     states = {i["title"]: i["state"] for i in st1.get(la(graded, "/assessments")).json()}
-    assert states["Due soon"] == "closed" and states["Opens later"] == "not_open"
+    assert states["Due soon"] == "closed" and "Opens later" not in states
 
 
 def test_expired_attempt_is_submitted_with_its_saved_answers(db, graded):

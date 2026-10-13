@@ -75,6 +75,13 @@ export function WorkDetail(){
     try{await upload(`/learn/offerings/${offering.id}/assessments/${item!.id}/submissions`,form);setMessage('Turned in. Your teacher can see it now.');toast('Turned in. Your teacher can see it now.');await query.refetch()}
     catch(err){setMessage(errorText(err))}finally{setBusy(false)}
   }
+  async function markDone(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();setMessage('');
+    const note=String(new FormData(e.currentTarget).get('note')??'');   // read before awaiting
+    setBusy(true);
+    try{await post(`/learn/offerings/${offering.id}/assessments/${item!.id}/mark-done`,{note});setMessage('Marked as done. Your teacher can see it now.');toast('Marked as done. Your teacher can see it now.');await query.refetch()}
+    catch(err){setMessage(errorText(err))}finally{setBusy(false)}
+  }
   return <>
     <ClassworkTypes base={`/student/offerings/${offering.id}`} current={item.kind==='online_quiz'?'quiz':'activity'}/>
     <p className="back"><Link to={origin.to}>← Back to {origin.label}</Link></p>
@@ -91,13 +98,19 @@ export function WorkDetail(){
         {item.state==='not_open'&&<p>This quiz has not opened yet.</p>}{item.state==='closed'&&<p>The deadline has passed.</p>}{item.state==='done'&&<p>You have used all your attempts.</p>}</>}
       {item.kind==='activity'&&<>
         {item.state==='not_open'&&<p>This activity has not opened yet.</p>}
-        {item.can_submit?<form onSubmit={submitFile}><label>{item.submissions?.length?'Add a new PDF to resubmit':'Add your work as a PDF'} (up to 20 MB)<input name="file" type="file" accept=".pdf,application/pdf" required/></label>
+        {item.requires_file===false?(item.can_submit?<form onSubmit={markDone}>
+          <p className="muted">Nothing to upload. Mark it done when you have finished.</p>
+          <label>Private comment to your teacher (optional)<textarea name="note" maxLength={2000}/></label>
+          {item.would_be_late&&<p className="warn" role="status">The deadline has passed. This will be marked late.</p>}
+          <button className="primary" disabled={busy}>{busy?'Saving…':'Mark as done'}</button></form>
+          :item.submissions?.length?null:item.state!=='not_open'&&<p className="warn" role="status">The deadline has passed. Ask your teacher if you still need to turn it in.</p>)
+        :item.can_submit?<form onSubmit={submitFile}><label>{item.submissions?.length?'Add a new PDF to resubmit':'Add your work as a PDF'} (up to 20 MB)<input name="file" type="file" accept=".pdf,application/pdf" required/></label>
           <label>Private comment to your teacher (optional)<textarea name="note" maxLength={2000}/></label>
           {item.would_be_late&&<p className="warn" role="status">The deadline has passed. This will be marked late.</p>}
           <button className="primary" disabled={busy}>{busy?'Turning in…':item.submissions?.length?'Resubmit':'Turn in'}</button></form>
           :item.state!=='not_open'&&<p className="warn" role="status">{item.submissions?.length?'The deadline has passed, so your submission can no longer be replaced. Ask your teacher if you need to change it.':'The deadline has passed. Ask your teacher if you still need to submit.'}</p>}
         {item.submissions&&item.submissions.length>0&&<><h3>Your submissions</h3>
-          <ul>{[...item.submissions].reverse().map(s=><li key={s.version}>Version {s.version} · {when(s.submitted_at)}{s.is_late?' · late':''} · <a className="touch" href={`/api/files/${s.file.id}/download`}>{s.file.name}</a>{s.note&&<span className="muted"> — {s.note}</span>}</li>)}</ul></>}</>}
+          <ul>{[...item.submissions].reverse().map(s=><li key={s.version}>Version {s.version} · {when(s.submitted_at)}{s.is_late?' · late':''} · {s.file?<a className="touch" href={`/api/files/${s.file.id}/download`}>{s.file.name}</a>:'Marked done'}{s.note&&<span className="muted"> — {s.note}</span>}</li>)}</ul></>}</>}
     </aside></div></>;
 }
 

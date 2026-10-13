@@ -108,11 +108,11 @@ function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,on
   if(kind!=='activity')return <div className="grade-work">{card}</div>;
   return <div className="grade-work has-sub">{card}
     <section className="grade-sub" aria-label={`Work from ${row.student}`}>{sub?<>
-      <p><strong>{sub.file.name}</strong> <a className="touch" href={`/api/files/${sub.file.id}/download`}>Download</a><br/>
+      <p><strong>{sub.file?sub.file.name:'Marked as done'}</strong> {sub.file&&<a className="touch" href={`/api/files/${sub.file.id}/download`}>Download</a>}<br/>
         <span className="muted">Version {sub.version} of {row.versions} · {when(sub.submitted_at)}</span>{sub.is_late&&<> <span className="badge">Late</span></>}</p>
       {sub.note&&<p className="pre">{sub.note}</p>}
       {row.new_version_since_grading&&<p className="warn" role="status">New version since you graded. Review it and save the score again.</p>}
-      <iframe className="file-frame" src={`/api/files/${sub.file.id}/preview`} title={`Preview of ${sub.file.name}`}/></>:<p className="muted">Nothing submitted yet.</p>}
+      {sub.file&&<iframe className="file-frame" src={`/api/files/${sub.file.id}/preview`} title={`Preview of ${sub.file.name}`}/>}</>:<p className="muted">Nothing submitted yet.</p>}
       {row.permission_open&&<p className="muted">A resubmission permission is open.</p>}</section></div>;
 }
 

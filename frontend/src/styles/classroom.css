@@ -222,3 +222,13 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .seq.compact li.dragging{opacity:.5}
 .seq.compact li.draggable:hover{outline:2px dashed var(--action);outline-offset:-2px}
 .drag-handle{color:var(--muted);letter-spacing:-2px;pointer-events:none;order:-1}
+/* grades: students down, work across, like the Classroom Grades tab */
+.gradebook th{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:500;color:var(--text);white-space:normal;vertical-align:bottom}
+.gradebook thead th{border-bottom:2px solid var(--border);min-width:120px}
+.gradebook thead th.sticky{min-width:220px}
+.gradebook thead th a{font-weight:600}
+.gradebook thead .muted{font-size:.78rem;font-weight:400}
+.gradebook tbody tr:hover td,.gradebook tbody tr:hover th.sticky{background:var(--surface-alt)}
+.gradebook td{vertical-align:middle}
+.person-cell{display:flex;align-items:center;gap:12px;min-width:200px}
+.person-cell .muted{font-size:.78rem}

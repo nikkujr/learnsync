@@ -39,6 +39,7 @@ class AssessmentDraftSave(BaseModel):
     available_from: datetime | None = None
     deadline: datetime | None = None
     allow_late: bool = False
+    requires_file: bool = True
     max_attempts: int = Field(default=1, ge=1, le=10)
     score_rule: Literal["highest", "latest"] = "highest"
     include_in_grade: bool = True
@@ -53,6 +54,10 @@ class AssessmentSettings(BaseModel):
 
 class AnswersSave(BaseModel):
     answers: dict[str, Any] = Field(default_factory=dict)
+
+
+class MarkDone(BaseModel):
+    note: str = Field(default="", max_length=2000)
 
 
 class AttemptSubmit(BaseModel):

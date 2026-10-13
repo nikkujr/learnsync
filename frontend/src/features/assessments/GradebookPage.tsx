@@ -5,6 +5,7 @@ import {useQuery} from '@tanstack/react-query';
 import {ApiError,api,post,send,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
 import {Dialog} from '../../components/Dialog';
+import {initials} from '../../components/classes';
 import {useHere,type Origin} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
 import {PERIOD_LABEL,fmt,type Cell,type Gradebook,type GradeRow} from './types';
@@ -95,7 +96,7 @@ export function GradebookPage(){
       </details></section>
 
     <section className="panel"><h3>Scores and grades</h3>
-      <p className="muted">— means pending (not scored yet). 0.00 is a real recorded zero. “Unreleased change” means the student still sees an older result. Grades and ranks to share or download are on the Class standing tab.</p>
+      <details className="more"><summary>How to read this table</summary><p className="muted">— means pending (not scored yet). 0.00 is a real recorded zero. “Unreleased change” means the student still sees an older result. Grades and ranks to share or download are on the Class standing tab.</p></details>
       <details className="more"><summary>Filter students</summary>
         <div className="actions"><label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or student number"/></label>
           <label>Section<select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
@@ -107,10 +108,10 @@ export function GradebookPage(){
         <thead>
           <tr><th className="sticky">Student</th>{shown.filter(p=>p!=='course').map(p=><th key={p} colSpan={byPeriod(p).length+1}>{PERIOD_LABEL[p]??p}</th>)}<th>Course</th></tr>
           <tr><th className="sticky"><span className="sr-only">Student</span></th>
-            {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><th key={c.id}><Link state={here} to={`/faculty/offerings/${offering.id}/assessments/${c.id}/scores`} title="Open this assessment's scores and attempts">{c.title}</Link><br/><span className="muted">{label(c.category_key)} · /{fmt(c.max_points)}</span></th>),<th key={p+'g'}>Grade</th>])}
+            {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><th key={c.id}><Link state={here} to={`/faculty/offerings/${offering.id}/assessments/${c.id}/scores`} title="Open this assessment's scores and attempts">{c.title}</Link><br/><span className="muted">Out of {fmt(c.max_points)}</span><br/><span className="muted">{label(c.category_key)}</span></th>),<th key={p+'g'}>Grade</th>])}
             <th>Grade</th></tr></thead>
         <tbody>{rows.map(r=><tr key={r.student_id}>
-          <th className="sticky" scope="row"><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}</span></th>
+          <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}</span></span></span></th>
           {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
             onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)}/></td>),
             <td key={p+'g'}><GradeCell row={r} period={p} onReview={setDetail}/></td>])}

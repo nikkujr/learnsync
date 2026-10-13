@@ -154,7 +154,7 @@ def copy_from(db, actor, target, source):
         db.flush()
         draft = AssessmentRevision(
             assessment_id=new.id, version=1, created_by=actor.id, title=rev.title, instructions=rev.instructions,
-            category_key=rev.category_key, period=rev.period, max_points=rev.max_points, allow_late=rev.allow_late,
+            category_key=rev.category_key, period=rev.period, max_points=rev.max_points, allow_late=rev.allow_late, requires_file=rev.requires_file,
             max_attempts=rev.max_attempts, score_rule=rev.score_rule, include_in_grade=rev.include_in_grade,
             anchor_node_id=rev.anchor_node_id, ai_generated=rev.ai_generated, ai_language=rev.ai_language)
         db.add(draft)    # dates are left empty: last semester's deadlines mean nothing now
@@ -181,7 +181,7 @@ def duplicate(db, actor, offering, assessment):
     draft = AssessmentRevision(
         assessment_id=new.id, version=1, created_by=actor.id, title=f"Copy of {rev.title}"[:200],
         instructions=rev.instructions, category_key=rev.category_key, period=rev.period, max_points=rev.max_points,
-        allow_late=rev.allow_late, max_attempts=rev.max_attempts, score_rule=rev.score_rule,
+        allow_late=rev.allow_late, requires_file=rev.requires_file, max_attempts=rev.max_attempts, score_rule=rev.score_rule,
         include_in_grade=rev.include_in_grade, anchor_node_id=rev.anchor_node_id, ai_generated=rev.ai_generated,
         ai_language=rev.ai_language)
     db.add(draft)

@@ -32,6 +32,7 @@ from .schemas import (
     BatchScores,
     Correction,
     GradePublishInput,
+    MarkDone,
     ParseInput,
     PermissionInput,
     PlanInput,
@@ -325,6 +326,14 @@ def submit_activity(offering_id: UUID, assessment_id: UUID, file: UploadFile = F
     offering, enrollment = learner_offering(db, offering_id, actor, write=True)
     a, _ = learner.student_assessment(db, offering, enrollment, assessment_id, "activity")
     return submissions.submission_view(db, submissions.submit(db, actor, a, file, note))
+
+
+@router.post(L + "/assessments/{assessment_id}/mark-done", status_code=201)
+def mark_activity_done(offering_id: UUID, assessment_id: UUID, data: MarkDone, actor=Depends(student),
+                       db: Session = Depends(get_db)):
+    offering, enrollment = learner_offering(db, offering_id, actor, write=True)
+    a, _ = learner.student_assessment(db, offering, enrollment, assessment_id, "activity")
+    return submissions.submission_view(db, submissions.mark_done(db, actor, a, data.note))
 
 
 @router.get(L + "/results")

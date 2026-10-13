@@ -69,6 +69,7 @@ class AssessmentRevision(Base):
     available_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     allow_late: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_file: Mapped[bool] = mapped_column(Boolean, default=True)   # an activity can be turned in by marking it done
     max_attempts: Mapped[int] = mapped_column(Integer, default=1)
     score_rule: Mapped[str] = mapped_column(String(8), default="highest")
     include_in_grade: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -161,7 +162,7 @@ class ActivitySubmission(Base):
     revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assessment_revision.id"))
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account.id"), index=True)
     version: Mapped[int] = mapped_column(Integer)
-    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stored_file.id"))
+    file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_file.id"))   # null when the activity is turned in by marking it done
     note: Mapped[str] = mapped_column(Text, default="")
     is_late: Mapped[bool] = mapped_column(Boolean, default=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
