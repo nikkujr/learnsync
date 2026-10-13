@@ -7,6 +7,7 @@ from app.features.teaching import models as teaching_models  # noqa: F401
 from app.features.assessments import models as assessment_models  # noqa: F401
 from app.features.study import models as study_models  # noqa: F401
 from app.features.support import models as support_models  # noqa: F401
+from app.features.notifications import models as notification_models  # noqa: F401
 
 target_metadata = Base.metadata
 

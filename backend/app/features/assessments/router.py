@@ -12,6 +12,7 @@ from . import (
     attachments,
     attempts,
     attendance,
+    comments,
     definitions,
     gradebook_edit,
     grading,
@@ -31,6 +32,7 @@ from .schemas import (
     AttemptSubmit,
     AttendanceInput,
     BatchScores,
+    CommentInput,
     Correction,
     ExcuseInput,
     GradePublishInput,
@@ -366,6 +368,43 @@ def mark_activity_done(offering_id: UUID, assessment_id: UUID, data: MarkDone, a
     offering, enrollment = learner_offering(db, offering_id, actor, write=True)
     a, _ = learner.student_assessment(db, offering, enrollment, assessment_id, "activity")
     return submissions.submission_view(db, submissions.mark_done(db, actor, a, data.note))
+
+
+@router.post(L + "/assessments/{assessment_id}/unsubmit", status_code=204)
+def unsubmit_activity(offering_id: UUID, assessment_id: UUID, actor=Depends(student), db: Session = Depends(get_db)):
+    offering, enrollment = learner_offering(db, offering_id, actor, write=True)
+    a, _ = learner.student_assessment(db, offering, enrollment, assessment_id, "activity")
+    submissions.unsubmit(db, actor, a)
+
+
+@router.get(L + "/assessments/{assessment_id}/comments")
+def my_comments(offering_id: UUID, assessment_id: UUID, actor=Depends(student), db: Session = Depends(get_db)):
+    offering, enrollment = learner_offering(db, offering_id, actor)
+    a, _ = learner.student_assessment(db, offering, enrollment, assessment_id)
+    return comments.thread(db, a.id, actor.id)
+
+
+@router.post(L + "/assessments/{assessment_id}/comments", status_code=201)
+def comment_as_student(offering_id: UUID, assessment_id: UUID, data: CommentInput, actor=Depends(student),
+                       db: Session = Depends(get_db)):
+    offering, enrollment = learner_offering(db, offering_id, actor, write=True)
+    a, rev = learner.student_assessment(db, offering, enrollment, assessment_id)
+    return comments.student_says(db, actor, offering, a, rev.title, data.body)
+
+
+@router.get(T + "/assessments/{assessment_id}/comments/{student_id}")
+def student_comments(offering_id: UUID, assessment_id: UUID, student_id: UUID, actor=Depends(faculty),
+                     db: Session = Depends(get_db)):
+    _, a = assessment_of(db, offering_id, assessment_id, actor, write=False)
+    return comments.thread(db, a.id, student_id)
+
+
+@router.post(T + "/assessments/{assessment_id}/comments/{student_id}", status_code=201)
+def comment_as_teacher(offering_id: UUID, assessment_id: UUID, student_id: UUID, data: CommentInput,
+                       actor=Depends(faculty), db: Session = Depends(get_db)):
+    offering, a = assessment_of(db, offering_id, assessment_id, actor)
+    rev = definitions.revision(db, a.id, "published")
+    return comments.teacher_says(db, actor, offering, a, rev.title if rev else "", student_id, data.body)
 
 
 @router.get(L + "/results")

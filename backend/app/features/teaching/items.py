@@ -9,6 +9,7 @@ from app.features.accounts.commands import audit
 from app.features.accounts.models import now
 from app.features.files.models import StoredFile
 from app.features.files.storage import save_upload
+from app.features.notifications import service as notifications
 from app.features.study.index import chunk_count, safe_index
 from app.features.study.models import LessonCompletion, ReferenceSnapshot
 
@@ -252,6 +253,10 @@ def publish(db, actor, offering, item, expected_counter):
     draft.state, draft.published_at, draft.published_by = "published", now(), actor.id
     safe_index(db, item, draft)       # study help can only ever use what is published
     audit(db, actor, "item.published", "learning_item", item.id, {"version": draft.version})
+    if previous is None:
+        notifications.notify_students(db, offering, section_ids_of(db, item.id), "material",
+                                      f"New {({'lesson': 'lesson', 'file': 'file', 'reference': 'link'}).get(item.kind, 'material')}: {draft.title}",
+                                      f"/student/offerings/{offering.id}/lessons/{item.id}")
     db.commit()
     return draft
 

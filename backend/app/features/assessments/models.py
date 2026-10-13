@@ -166,6 +166,7 @@ class ActivitySubmission(Base):
     note: Mapped[str] = mapped_column(Text, default="")
     is_late: Mapped[bool] = mapped_column(Boolean, default=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # the student took it back (Unsubmit); kept for the record, ignored everywhere else
 
 
 class SubmissionPermission(Base):
@@ -294,4 +295,15 @@ class AssessmentAttachment(Base):
     url: Mapped[str | None] = mapped_column(Text)
     file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_file.id"))
     position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AssessmentComment(Base):
+    """A private message between one student and the teacher about one assessment. Only those two ever see it."""
+    __tablename__ = "assessment_comment"
+    id: Mapped[uuid.UUID] = uid()
+    assessment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assessment.id"), index=True)
+    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account.id"), index=True)   # whose thread this is
+    author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account.id"))
+    body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

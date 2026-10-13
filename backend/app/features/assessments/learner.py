@@ -41,13 +41,14 @@ def result_view(db, assessment_id, student_id):
 
 def item_view(db, student, enrollment, a, rev):
     at = now()
+    own = db.scalar(select(AssessmentScore).where(AssessmentScore.assessment_id == a.id,
+                                                  AssessmentScore.student_id == student.id))
     out = {"id": a.id, "kind": a.kind, "title": rev.title, "instructions": rev.instructions,
            "available_from": rev.available_from, "deadline": rev.deadline,
            "allow_late": rev.allow_late, "max_points": rev.max_points,
            "anchor_node_id": rev.anchor_node_id, "result": result_view(db, a.id, student.id),
            "requires_file": rev.requires_file, "attachments": attachments.listing(db, rev),
-           "excused": bool(db.scalar(select(AssessmentScore.excused).where(
-               AssessmentScore.assessment_id == a.id, AssessmentScore.student_id == student.id)))}
+           "excused": bool(own and own.excused)}
     if a.kind == "online_quiz":
         used = used_attempts(db, a.id, student.id)
         current = db.scalar(select(QuizAttempt.id).where(
@@ -74,6 +75,7 @@ def item_view(db, student, enrollment, a, rev):
             allowed = allowed and not subs                           # nothing to replace: it is done once
         out.update(submissions=[submissions.submission_view(db, s) for s in subs],
                    can_submit=allowed, would_be_late=late)
+        out["can_unsubmit"] = bool(subs and not out["result"] and not (own and (own.score is not None or own.excused)))
         out["state"] = ("not_open" if reason == "not_open" else "submitted"
                         if subs and not allowed else "closed" if not allowed
                         else "resubmit" if subs else "available")

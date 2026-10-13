@@ -10,6 +10,7 @@ from app.features.accounts.commands import audit
 from app.features.accounts.models import now
 from app.features.files.models import StoredFile
 from app.features.files.storage import save_upload
+from app.features.notifications import service as notifications
 from app.features.study.events import record_event
 
 from .attempts import student_lock
@@ -24,14 +25,14 @@ SUBMISSION_TYPES = {".pdf"}
 def versions(db, assessment_id, student_id):
     return db.scalars(select(ActivitySubmission).where(
         ActivitySubmission.assessment_id == assessment_id,
-        ActivitySubmission.student_id == student_id)
+        ActivitySubmission.student_id == student_id, ActivitySubmission.withdrawn_at.is_(None))
         .order_by(ActivitySubmission.version)).all()
 
 
 def latest(db, assessment_id, student_id):
     return db.scalar(select(ActivitySubmission).where(
         ActivitySubmission.assessment_id == assessment_id,
-        ActivitySubmission.student_id == student_id)
+        ActivitySubmission.student_id == student_id, ActivitySubmission.withdrawn_at.is_(None))
         .order_by(ActivitySubmission.version.desc()).limit(1))
 
 
@@ -85,10 +86,34 @@ def submit(db, student, assessment, upload, note):
     db.add(row)
     db.flush()
     record_event(db, student.id, assessment.offering_id, "activity_submitted", assessment.id, row.id)
+    tell_teacher(db, student, assessment, rev)
     if permission:
         permission.consumed_at = at
     db.commit()
     return row
+
+
+def tell_teacher(db, student, assessment, rev):
+    from app.features.academics.models import Offering
+    offering = db.get(Offering, assessment.offering_id)
+    notifications.notify(db, [offering.faculty_id], "turned_in", f"{student.display_name} turned in {rev.title}",
+                         f"/faculty/offerings/{offering.id}/assessments/{assessment.id}/scores", offering,
+                         notifications.subject_code(db, offering))
+
+
+def unsubmit(db, student, assessment):
+    """The student takes a turn-in back, as long as nothing has been done with it: no score recorded, nothing returned."""
+    student_lock(db, assessment.id, student.id)
+    row = latest(db, assessment.id, student.id)
+    if row is None:
+        fail(409, "nothing_to_unsubmit", "There is nothing turned in to take back.")
+    score = db.scalar(select(AssessmentScore).where(AssessmentScore.assessment_id == assessment.id,
+                                                    AssessmentScore.student_id == student.id))
+    if (score and (score.score is not None or score.excused)) or latest_release(db, assessment.id, student.id):
+        fail(409, "already_graded", "Your teacher has already graded this, so it cannot be taken back.")
+    row.withdrawn_at = now()
+    audit(db, student, "submission.unsubmitted", "assessment", assessment.id, {"version": row.version})
+    db.commit()
 
 
 def mark_done(db, student, assessment, note):
@@ -103,11 +128,14 @@ def mark_done(db, student, assessment, note):
         fail(409, "already_done", "You already marked this as done.")
     if not allowed:
         fail(409, "closed", "The deadline has passed. Ask your teacher if you need to turn it in.")
+    number = (db.scalar(select(func.max(ActivitySubmission.version)).where(
+        ActivitySubmission.assessment_id == assessment.id, ActivitySubmission.student_id == student.id)) or 0) + 1
     row = ActivitySubmission(assessment_id=assessment.id, revision_id=rev.id, student_id=student.id,
-                             version=1, file_id=None, note=note[:2000], is_late=late)
+                             version=number, file_id=None, note=note[:2000], is_late=late)
     db.add(row)
     db.flush()
     record_event(db, student.id, assessment.offering_id, "activity_submitted", assessment.id, row.id)
+    tell_teacher(db, student, assessment, rev)
     if permission:
         permission.consumed_at = at
     db.commit()

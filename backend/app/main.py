@@ -14,6 +14,7 @@ from .features.assessments.router import router as assessments_router
 from .features.dashboard.router import router as dashboard_router
 from .features.exports.router import router as exports_router
 from .features.files.router import router as files_router
+from .features.notifications.router import router as notifications_router
 from .features.study.router import router as study_router
 from .features.support.router import router as support_router
 from .features.teaching.router import router as teaching_router
@@ -28,6 +29,7 @@ app.include_router(study_router)
 app.include_router(exports_router)
 app.include_router(support_router)
 app.include_router(dashboard_router)
+app.include_router(notifications_router)
 logger = logging.getLogger("learnsync")
 
 @app.middleware("http")

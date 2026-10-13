@@ -20,6 +20,7 @@ from .features.accounts import (
 )
 from .features.assessments import models as _assessments  # noqa: F401
 from .features.files import models as _files  # noqa: F401
+from .features.notifications import models as _notifications  # noqa: F401
 from .features.study import models as _study  # noqa: F401
 from .features.support import models as _support  # noqa: F401
 from .features.teaching import models as _teaching  # noqa: F401

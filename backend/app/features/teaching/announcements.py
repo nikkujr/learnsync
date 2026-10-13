@@ -4,6 +4,7 @@ from sqlalchemy import delete, select
 from app.errors import fail
 from app.features.accounts.commands import audit
 from app.features.accounts.models import now
+from app.features.notifications import service as notifications
 
 from .access import targeted
 from .items import check_sections
@@ -70,6 +71,10 @@ def publish(db, actor, announcement):
         fail(409, "announcement_locked", "Only drafts can be published.")
     announcement.state, announcement.published_at = "published", now()
     audit(db, actor, "announcement.published", "announcement", announcement.id)
+    from app.features.academics.models import Offering
+    offering = db.get(Offering, announcement.offering_id)
+    notifications.notify_students(db, offering, section_ids_of(db, announcement.id), "announcement",
+                                  f"Announcement: {announcement.title}", f"/student/offerings/{offering.id}/stream")
     db.commit()
 
 

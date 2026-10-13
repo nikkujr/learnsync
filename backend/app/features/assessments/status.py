@@ -17,7 +17,7 @@ def counts(db, offering, assessment):
     submitted = set()
     if assessment.kind == "activity":
         submitted = set(db.scalars(select(ActivitySubmission.student_id).where(
-            ActivitySubmission.assessment_id == assessment.id))) & ids
+            ActivitySubmission.assessment_id == assessment.id, ActivitySubmission.withdrawn_at.is_(None)))) & ids
     elif assessment.kind == "online_quiz":
         submitted = set(db.scalars(select(QuizAttempt.student_id).where(
             QuizAttempt.assessment_id == assessment.id, QuizAttempt.state == "submitted"))) & ids

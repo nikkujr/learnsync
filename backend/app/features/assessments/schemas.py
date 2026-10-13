@@ -56,6 +56,10 @@ class AnswersSave(BaseModel):
     answers: dict[str, Any] = Field(default_factory=dict)
 
 
+class CommentInput(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+
+
 class LinkInput(BaseModel):
     title: str = Field(default="", max_length=200)
     url: str = Field(min_length=8, max_length=2000)

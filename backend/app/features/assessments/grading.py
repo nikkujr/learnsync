@@ -15,6 +15,7 @@ from app.errors import fail
 from app.features.academics.models import Enrollment, Section
 from app.features.accounts.commands import audit
 from app.features.accounts.models import Account, now
+from app.features.notifications import service as notifications
 from app.features.teaching.access import targeted
 
 from .definitions import revision
@@ -235,7 +236,8 @@ def gradebook(db, offering):
             .order_by(ResultPublication.release_number)):
         released[(r.assessment_id, r.student_id)] = r
     turned_in = {(r[0], r[1]) for r in db.execute(select(ActivitySubmission.assessment_id, ActivitySubmission.student_id).join(
-        Assessment, Assessment.id == ActivitySubmission.assessment_id).where(Assessment.offering_id == offering.id).distinct())}
+        Assessment, Assessment.id == ActivitySubmission.assessment_id).where(Assessment.offering_id == offering.id,
+        ActivitySubmission.withdrawn_at.is_(None)).distinct())}
     published, flags = latest_grade_rows(db, offering.id), review_flags(db, offering.id)
     sections = {s.id: s.name for s in db.scalars(select(Section).where(
         Section.term_id == offering.term_id))}
@@ -322,6 +324,8 @@ def publish_grades(db, actor, offering, period, student_ids):
         released.append(account.id)
     audit(db, actor, "grades.published", "offering", offering.id,
           {"period": period, "published": len(released), "pending": len(pending)})
+    notifications.notify(db, released, "grade", f"{period.capitalize()} grade published",
+                         f"/student/offerings/{offering.id}/results", offering, notifications.subject_code(db, offering))
     db.commit()
     return {"published": len(released), "unchanged": unchanged, "pending": pending}
 

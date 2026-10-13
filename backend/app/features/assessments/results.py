@@ -5,6 +5,7 @@ time without changing what the student sees until faculty release again."""
 from sqlalchemy import func, select
 
 from app.features.accounts.commands import audit
+from app.features.notifications import service as notifications
 
 from .models import Assessment, AssessmentScore, ResultPublication
 
@@ -45,11 +46,18 @@ def release(db, actor, assessment, rev, student_ids=None):
                                           AssessmentScore.score.is_not(None))
     if student_ids is not None:
         query = query.where(AssessmentScore.student_id.in_(list(student_ids)))
-    released = 0
+    released, returned_to = 0, []
     for row in db.scalars(query):
         if release_one(db, assessment, rev, row, actor):
             released += 1
+            returned_to.append(row.student_id)
     audit(db, actor, "results.released", "assessment", assessment.id, {"count": released})
+    if returned_to:
+        from app.features.academics.models import Offering
+        offering = db.get(Offering, assessment.offering_id)
+        notifications.notify(db, returned_to, "returned", f"Your result was returned: {rev.title}",
+                             f"/student/offerings/{offering.id}/work/{assessment.id}", offering,
+                             notifications.subject_code(db, offering))
     db.commit()
     return released
 

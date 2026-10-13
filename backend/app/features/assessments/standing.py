@@ -56,7 +56,7 @@ def submission_status(db, assessment, cell):
         return cell.get("attempt_state", "not_attempted")
     if assessment.kind == "activity":
         latest = db.scalar(select(ActivitySubmission).where(
-            ActivitySubmission.assessment_id == assessment.id,
+            ActivitySubmission.assessment_id == assessment.id, ActivitySubmission.withdrawn_at.is_(None),
             ActivitySubmission.student_id == cell["student_id"])
             .order_by(ActivitySubmission.version.desc()).limit(1))
         return "not_submitted" if not latest else "submitted_late" if latest.is_late else "submitted"

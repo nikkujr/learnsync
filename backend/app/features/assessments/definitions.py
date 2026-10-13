@@ -7,6 +7,7 @@ from sqlalchemy import delete, func, select
 from app.errors import fail
 from app.features.accounts.commands import audit
 from app.features.accounts.models import now
+from app.features.notifications import service as notifications
 from app.features.teaching.items import check_sections, outline_ids
 
 from . import attachments
@@ -367,5 +368,9 @@ def publish(db, actor, offering, assessment, expected_counter):
         flag_graded_change(db, offering.id, published, f"{draft.title}: grading settings changed.")
     audit(db, actor, "assessment.published", "assessment", assessment.id,
           {"version": draft.version})
+    if published is None and not (draft.available_from and draft.available_from > now()):     # a scheduled one is announced when it opens: not yet
+        notifications.notify_students(db, offering, section_ids_of(db, assessment.id), "assigned",
+                                      f"New {assessment.kind.replace('_', ' ')}: {draft.title}",
+                                      f"/student/offerings/{offering.id}/work/{assessment.id}")
     db.commit()
     return draft
