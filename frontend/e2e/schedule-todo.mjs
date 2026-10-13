@@ -143,7 +143,7 @@ try{
   await rp.locator('.hub-stat',{hasText:'Turned in'}).click();await rp.waitForLoadState('networkidle');await rp.locator('.grade-student').first().waitFor();
   check('the Turned in count opens the student work page on that group',(await rp.getByRole('button',{name:/^Turned in/}).getAttribute('aria-pressed'))==='true');
   await rp.locator('.grade-student',{hasText:'Demo student 1'}).click();
-  check('the teacher sees the student’s private comment next to the grade',await rp.getByText('Is this enough?').first().isVisible());
+  check('the teacher sees the student’s private comment next to the grade',await rp.getByText('Is this enough?').first().waitFor({timeout:8000}).then(()=>true,()=>false));
   await rp.getByLabel('Add a private comment').fill('Yes, that is enough.');await rp.getByRole('button',{name:'Post',exact:true}).click();await rp.getByText('Yes, that is enough.').first().waitFor();
   await rp.getByLabel(/^Points/).fill('9');await rp.getByRole('button',{name:/^Save/}).first().click();await rp.waitForTimeout(1500);
   await rp.getByLabel('Select Demo student 1').check();

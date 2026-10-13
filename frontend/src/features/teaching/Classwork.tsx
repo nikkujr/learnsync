@@ -1,3 +1,4 @@
+import {Icon} from '../../components/Icon';
 import type React from 'react';
 import {useEffect,useRef,useState} from 'react';
 import {Link,useNavigate,useOutletContext,useSearchParams} from 'react-router-dom';
@@ -135,9 +136,9 @@ export function FacultyClasswork(){
         return <li key={r.key} data-cat={r.cat} className={dragging===r.id?'dragging':drag?'draggable':undefined} draggable={drag||undefined}
           onDragStart={drag?e=>{setDragging(r.id);e.dataTransfer.effectAllowed='move'}:undefined} onDragEnd={drag?()=>setDragging(null):undefined}
           onDragOver={drag&&dragging?e=>e.preventDefault():undefined} onDrop={drag?e=>{e.preventDefault();const d=n.rows.find(x=>x.id===dragging);setDragging(null);if(d)void place(n,d,r)}:undefined}>
-        {drag&&<span className="drag-handle" aria-hidden="true">⋮⋮</span>}<span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
+        {drag&&<span className="drag-handle"><Icon name="grip" size={20}/></span>}<div className="row-main"><span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
         {r.counts&&!r.archived&&<span className="row-counts" aria-label="Student work"><Link to={`${r.to}/scores?status=turned_in`}><strong>{r.counts.turned_in}</strong> Turned in</Link><Link to={`${r.to}/scores?status=assigned`}><strong>{r.counts.assigned}</strong> Assigned</Link><Link to={`${r.to}/scores?status=graded`}><strong>{r.counts.graded}</strong> Graded</Link></span>}
-        <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span>{!closed&&<details className="dropdown row-menu"><summary className="icon-btn" aria-label={`More actions for ${r.title}`}><span aria-hidden="true">⋮</span></summary>
+        <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span></div>{!closed&&<details className="dropdown row-menu"><summary className="icon-btn" aria-label={`More actions for ${r.title}`}><Icon name="more"/></summary>
           <div className="menu-list" role="group" aria-label={`Actions for ${r.title}`}>
             <Link to={editTo(r)} onClick={closeMenu}>Edit</Link>
             {r.type==='assessment'&&r.published&&<Link to={`${base}/assessments/${r.id}/scores`} onClick={closeMenu}>View student work</Link>}

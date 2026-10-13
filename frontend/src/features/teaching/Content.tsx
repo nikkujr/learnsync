@@ -1,3 +1,4 @@
+import {Icon} from '../../components/Icon';
 import {useToast} from '../../components/undo';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useNavigate,useOutletContext,useParams} from 'react-router-dom';
@@ -121,11 +122,11 @@ function ItemEditor({offering,item,refetch}:{offering:OfferingSummary;item:Item;
   const closeMenu=(e:React.MouseEvent<HTMLElement>)=>{(e.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open')};
   return <div className="compose">
     <header className="compose-bar">
-      <button type="button" className="icon-btn" aria-label="Close and go back to Classwork" onClick={leave}><span aria-hidden="true">×</span></button>
-      <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} aria-hidden="true">▤</span>
+      <button type="button" className="icon-btn" aria-label="Close and go back to Classwork" onClick={leave}><Icon name="close"/></button>
+      <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} ><Icon name="material"/></span>
       <h1>{({lesson:'Lesson',file:'File',reference:'Link'})[item.kind]}</h1>
       <span className="compose-actions"><SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/>
-        <details className="dropdown manage"><summary className="button icon-btn" aria-label="More actions"><span aria-hidden="true">⋮</span></summary>
+        <details className="dropdown manage"><summary className="button icon-btn" aria-label="More actions"><Icon name="more"/></summary>
           <div className="menu-list" role="group" aria-label="More actions">
             <button type="button" onClick={e=>{closeMenu(e);void setSettings({archived:!item.archived})}}>{item.archived?'Restore':'Archive'}</button>
             <hr/><button type="button" onClick={e=>{closeMenu(e);void discard()}}>{item.published?'Discard draft':'Delete'}</button>

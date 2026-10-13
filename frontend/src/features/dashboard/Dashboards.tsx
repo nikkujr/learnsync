@@ -5,7 +5,7 @@ import {api} from '../../app/api';
 import {useHere} from '../../components/origin';
 import {useAuth} from '../../app/providers';
 import {markSeen,readSeen} from '../../components/seen';
-import {classColor,initials,useClasses} from '../../components/classes';
+import {classArt,classColor,initials,useClasses} from '../../components/classes';
 
 export const when=(iso:string)=>new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 const dateTime=(iso:string)=>new Date(iso).toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
@@ -89,7 +89,7 @@ export function StudentHome(){
 export function SubjectCard({id,title,section,teacher,meta,progress,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;detail?:string;to:string;links:[string,string][]}){
   const here=useHere();
   return <article className="class-card" style={{'--cc':classColor(id)} as React.CSSProperties}>
-    <div className="class-head"><h3><Link state={here} to={to}>{title}</Link></h3><p>{section}</p>{teacher&&<p>{teacher}</p>}</div>
+    <div className={`class-head ${classArt(id)}`}><h3><Link state={here} to={to}>{title}</Link></h3><p>{section}</p>{teacher&&<p>{teacher}</p>}</div>
     <span className="class-avatar" aria-hidden="true">{initials(teacher||title)}</span>
     <div className="class-body">{meta&&<p><strong>{meta}</strong></p>}
       {progress!==undefined&&progress!==null&&<div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div>}

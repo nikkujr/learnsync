@@ -2,7 +2,7 @@ import {Link,NavLink,Outlet,useLocation,useMatch,useParams} from 'react-router-d
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
 import type {OfferingSummary} from '../academics/types';
-import {classColor,initials} from '../../components/classes';
+import {classArt,classColor,initials} from '../../components/classes';
 import type {SyllabusState} from './types';
 
 interface Tab{label:string;to:string;segments:string[];hidden?:boolean}
@@ -35,7 +35,7 @@ export function OfferingLayout({role}:{role:'faculty'|'student'}){
   return <>
     {query.isPending?<p>Loading…</p>:query.error?<section className="panel"><h1>Subject unavailable</h1><p role="alert">{query.error.message}</p></section>:<>
       {(()=>{const o=query.data;const line=`${o.subject.code} · ${role==='faculty'?o.sections.map(s=>s.name).join(', ')||'No sections':o.faculty.display_name} · ${o.term}${o.term_status==='closed'?' · closed (read-only)':''}`;
-        return stream?<header className="banner" style={{'--cc':classColor(o.id)} as React.CSSProperties}><h1>{o.subject.title}</h1><p>{line}</p></header>
+        return stream?<header className={`banner ${classArt(o.id)}`} style={{'--cc':classColor(o.id)} as React.CSSProperties}><h1>{o.subject.title}</h1><p>{line}</p></header>
           :<header className="class-title" style={{'--cc':classColor(o.id)} as React.CSSProperties}><span className="class-dot" style={{background:classColor(o.id)}} aria-hidden="true">{initials(o.subject.title)[0]}</span><div><h1>{o.subject.title}</h1><p className="muted">{line}</p></div></header>})()}
       {role==='student'&&query.data.enrollment_status==='withdrawn'?<>
         <p className="warn" role="status">You are no longer enrolled in this subject. Course content is not available, but you can still see your own results and your earlier study chats.</p>

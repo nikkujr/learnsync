@@ -1,3 +1,4 @@
+import {Icon,type IconName} from '../../components/Icon';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -10,7 +11,7 @@ import type {Item,LearnItem} from './types';
 import {studentHomeQuery,workLink} from '../dashboard/Dashboards';
 
 const day=(iso:string)=>new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-const ICON:Record<string,string>={Quiz:'?','Paper quiz':'?',Activity:'✎',Examination:'✱','Teacher-scored item':'✎'};
+const ICON:Record<string,IconName>={Quiz:'quiz','Paper quiz':'quiz',Activity:'activity',Examination:'exam','Teacher-scored item':'activity'};
 const KIND:Record<string,string>={lesson:'Lesson',file:'File',reference:'Link',online_quiz:'Quiz',offline_quiz:'Paper quiz',activity:'Activity',exam:'Examination',manual:'Teacher-scored item'};
 
 /** Teachers: announcements to the sections, then what was published lately. */
@@ -30,7 +31,7 @@ export function FacultyStream(){
       {soon.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{soon.map(a=><li key={a.id}><Link to={`${base}/assessments/${a.id}`}>{assessmentTitle(a)}</Link><span className="muted">Due {day(a.published!.deadline!)}</span></li>)}</ul>}</section></aside>
     <div className="stream-feed">
       <FacultyAnnouncements/>
-      {recent.map(r=><article className="panel post" key={r.key}><span className="post-icon" aria-hidden="true">{ICON[r.kind]??'▤'}</span>
+      {recent.map(r=><article className="panel post" key={r.key}><span className="post-icon" ><Icon name={ICON[r.kind]??'activity'} size={20}/></span>
         <div className="post-head"><h3>You posted a new {r.kind.toLowerCase()}</h3><time dateTime={r.at}>{day(r.at)}</time></div><p className="post-body"><Link className="post-link" to={r.to}>{r.title}</Link></p></article>)}
       {recent.length===0&&<p className="muted">Lessons, files, links and assessments you publish appear here.</p>}
     </div></div>;
@@ -38,7 +39,7 @@ export function FacultyStream(){
 
 interface Post{id:string;title:string;body:string;published_at:string|null}
 interface Results{results:{assessment_id:string;title:string;released_at:string}[];grades:{period:string;published_at:string}[]}
-interface Entry{key:string;type:string;icon:string;title:string;at:string;body?:string;to?:string}
+interface Entry{key:string;type:string;icon:IconName;title:string;at:string;body?:string;to?:string}
 
 /** Students: one feed of announcements, new materials, released results and published grades, newest first. */
 export function StudentStream(){
@@ -52,10 +53,10 @@ export function StudentStream(){
   if(error)return <p role="alert">{error.message}</p>;
   if(!posts.data||!items.data||!results.data)return <p>Loading…</p>;
   const feed:Entry[]=[
-    ...posts.data.items.filter(p=>p.published_at).map(p=>({key:'p'+p.id,type:offering.faculty.display_name,icon:'✉',title:p.title,at:p.published_at!,body:p.body})),
-    ...items.data.map(i=>({key:'i'+i.id,type:`${offering.faculty.display_name} posted a new ${i.kind==='lesson'?'lesson':i.kind==='file'?'file':'link'}`,icon:'▤',title:i.title,at:i.published_at,to:`${base}/lessons/${i.id}`})),
-    ...results.data.results.map(r=>({key:'r'+r.assessment_id,type:'Your result was released',icon:'✓',title:r.title,at:r.released_at,to:`${base}/results`})),
-    ...results.data.grades.map(g=>({key:'g'+g.period,type:'A grade was published',icon:'★',title:`${g.period.charAt(0).toUpperCase()+g.period.slice(1)} grade`,at:g.published_at,to:`${base}/results`})),
+    ...posts.data.items.filter(p=>p.published_at).map((p):Entry=>({key:'p'+p.id,type:offering.faculty.display_name,icon:'announcement',title:p.title,at:p.published_at!,body:p.body})),
+    ...items.data.map((i):Entry=>({key:'i'+i.id,type:`${offering.faculty.display_name} posted a new ${i.kind==='lesson'?'lesson':i.kind==='file'?'file':'link'}`,icon:'material',title:i.title,at:i.published_at,to:`${base}/lessons/${i.id}`})),
+    ...results.data.results.map((r):Entry=>({key:'r'+r.assessment_id,type:'Your result was released',icon:'check',title:r.title,at:r.released_at,to:`${base}/results`})),
+    ...results.data.grades.map((g):Entry=>({key:'g'+g.period,type:'A grade was published',icon:'star',title:`${g.period.charAt(0).toUpperCase()+g.period.slice(1)} grade`,at:g.published_at,to:`${base}/results`})),
   ].sort((a,b)=>a.at<b.at?1:-1).slice(0,30);
   const mine=(home.data?.todo??[]).filter(w=>w.offering_id===offering.id&&w.deadline&&Date.parse(w.deadline)>Date.now()).slice(0,3);
   return <div className="stream">
@@ -63,7 +64,7 @@ export function StudentStream(){
       {mine.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{mine.map(w=><li key={w.assessment_id}><Link to={workLink(w)}>{w.title}</Link><span className="muted">Due {day(w.deadline!)}</span></li>)}</ul>}
       <Link className="touch" to="/student/todo">View all</Link></section></aside>
     <div className="stream-feed">{feed.length===0?<section className="panel"><h2>Nothing yet</h2><p className="muted">Announcements, new lessons and released results from your teacher appear here.</p></section>
-      :feed.map(e=><article className="panel post" key={e.key}><span className={`post-icon${e.icon==='✉'?' announcement':''}`} aria-hidden="true">{e.icon}</span>
+      :feed.map(e=><article className="panel post" key={e.key}><span className={`post-icon${e.icon==='announcement'?' announcement':''}`} ><Icon name={e.icon} size={20}/></span>
         <div className="post-head"><h3>{e.type}</h3><time dateTime={e.at}>{day(e.at)}</time></div>
         {e.body?<p className="post-body pre"><strong>{e.title}</strong>{'\n'}{e.body}</p>:<p className="post-body"><Link className="post-link" to={e.to!}>{e.title}</Link></p>}</article>)}</div></div>;
 }

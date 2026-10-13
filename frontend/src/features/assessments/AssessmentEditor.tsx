@@ -1,3 +1,4 @@
+import {Icon} from '../../components/Icon';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useNavigate,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -180,7 +181,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
         {v.max_attempts>1&&<label>Score used<select value={v.score_rule} disabled={locked} onChange={e=>set({score_rule:e.target.value as DraftContent['score_rule']})}><option value="highest">Highest attempt</option><option value="latest">Latest attempt</option></select></label>}</>}
     </details></aside>;
 
-  const manage=<details className="dropdown manage"><summary className="button icon-btn" aria-label="More actions"><span aria-hidden="true">⋮</span></summary>
+  const manage=<details className="dropdown manage"><summary className="button icon-btn" aria-label="More actions"><Icon name="more"/></summary>
     <div className="menu-list" role="group" aria-label="More actions">
       <button type="button" onClick={e=>{closeMenu(e);void duplicate()}}>Duplicate this {KIND_LABEL[assessment.kind].toLowerCase()}</button>
       {assessment.can_unpublish&&<button type="button" onClick={e=>{closeMenu(e);void unpublish()}}>Unpublish</button>}
@@ -207,8 +208,8 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
 
   return <div className="compose">
     <header className="compose-bar">
-      <button type="button" className="icon-btn" aria-label={`Close and go back to Classwork`} onClick={leave}><span aria-hidden="true">×</span></button>
-      <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} aria-hidden="true">{quiz?'?':assessment.kind==='activity'?'✎':'▤'}</span>
+      <button type="button" className="icon-btn" aria-label={`Close and go back to Classwork`} onClick={leave}><Icon name="close"/></button>
+      <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} ><Icon name={quiz?'quiz':assessment.kind==='activity'?'activity':'exam'}/></span>
       <h1>{KIND_LABEL[assessment.kind]}</h1>
       <span className="compose-actions"><SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/>{manage}{blocked?assignButton:assignMenu}</span>
     </header>

@@ -7,25 +7,27 @@ import {studentHomeQuery} from '../features/dashboard/Dashboards';
 import {useUnread} from './seen';
 import {StudyBuddy} from '../features/study/StudyBuddy';
 import {useConfirm} from './confirm';
+import {Icon,type IconName} from './Icon';
 import {classColor,initials,useClasses} from './classes';
 import {NotificationBell} from './Notifications';
 
-type NavItem={to:string;label:string;icon:string;end?:boolean;dot?:boolean};
+type NavItem={to:string;label:string;icon:IconName;end?:boolean;dot?:boolean};
 const ROLE_LABEL={admin:'Academic administrator',faculty:'Teaching faculty',student:'Student'} as const;
 
 /** Drawer entries. Icons are decoration only (aria-hidden); every entry has a visible text label. Faculty and students also get their class list (see ClassList). */
 function navigation(role:'admin'|'faculty'|'student'):{label:string;items:NavItem[]}[]{
   const home='/'+role;
-  const settings={label:'',items:[{to:'/account',label:'Settings',icon:'⚙'}]};
-  if(role==='admin')return [
-    {label:'',items:[{to:home,label:'Home',icon:'⌂',end:true},{to:`${home}/accounts`,label:'User accounts',icon:'♙'}]},
-    {label:'Academic management',items:[{to:`${home}/academics`,label:'School years',icon:'☰'},{to:`${home}/subjects`,label:'Prospectus',icon:'▤'}]},
-    {label:'Oversight',items:[{to:`${home}/issues`,label:'Reports',icon:'?'},{to:`${home}/audit`,label:'Audit history',icon:'◷'}]},
-    settings];
+  const settings:{label:string;items:NavItem[]}={label:'',items:[{to:'/account',label:'Settings',icon:'settings'}]};
+  if(role==='admin'){const admin:{label:string;items:NavItem[]}[]=[
+    {label:'',items:[{to:home,label:'Home',icon:'home',end:true},{to:`${home}/accounts`,label:'User accounts',icon:'people'}]},
+    {label:'Academic management',items:[{to:`${home}/academics`,label:'School years',icon:'term'},{to:`${home}/subjects`,label:'Prospectus',icon:'book'}]},
+    {label:'Oversight',items:[{to:`${home}/issues`,label:'Reports',icon:'help'},{to:`${home}/audit`,label:'Audit history',icon:'history'}]},
+    settings];return admin}
   const student=role==='student';
-  return [
-    {label:'',items:[{to:home,label:'Home',icon:'⌂',end:true,dot:student},...(student?[{to:`${home}/todo`,label:'To-do',icon:'☑'}]:[{to:`${home}/review`,label:'To review',icon:'✎'}]),{to:`${home}/calendar`,label:'Calendar',icon:'▦'}]},
-    {label:'',items:[{to:`${home}/subjects`,label:'All subjects',icon:'▤'},{to:`${home}/issues`,label:'Report a problem',icon:'?'},...settings.items]}];
+  const groups:{label:string;items:NavItem[]}[]=[
+    {label:'',items:[{to:home,label:'Home',icon:'home',end:true,dot:student},...(student?[{to:`${home}/todo`,label:'To-do',icon:'todo' as const}]:[{to:`${home}/review`,label:'To review',icon:'review' as const}]),{to:`${home}/calendar`,label:'Calendar',icon:'calendar'}]},
+    {label:'',items:[{to:`${home}/subjects`,label:'All subjects',icon:'book'},{to:`${home}/issues`,label:'Report a problem',icon:'help'},...settings.items]}];
+  return groups;
 }
 
 /** The user's current classes under the drawer's Home group, each with its banner colour. */
@@ -78,7 +80,7 @@ export function Shell(){
   return <div className={'app-shell'+(open?' drawer-on':'')}>
     <a href="#main" className="skip">Skip to content</a>
     <header className="header">
-      <button ref={menuButton} className="menu" aria-label="Toggle navigation" aria-expanded={open} aria-controls="drawer" onClick={toggle}><span aria-hidden="true">☰</span></button>
+      <button ref={menuButton} className="menu" aria-label="Toggle navigation" aria-expanded={open} aria-controls="drawer" onClick={toggle}><Icon name="menu"/></button>
       <Link to={home} className="brand"><span className="mark" aria-hidden="true">L</span>LearnSync</Link>
       <NotificationBell/>
       <details className="dropdown account" ref={account}>
@@ -97,7 +99,7 @@ export function Shell(){
         {navigation(user.role).map((group,gi)=><Fragment key={gi}>
           <div className="nav-group">
             {group.label&&<p className="nav-label">{group.label}</p>}
-            {group.items.map(i=><NavLink key={i.to} to={i.to} end={i.end}><span className="nav-icon" aria-hidden="true">{i.icon}</span>{i.label}{i.dot&&<UpdatesDot userId={user.id}/>}</NavLink>)}
+            {group.items.map(i=><NavLink key={i.to} to={i.to} end={i.end}><span className="nav-icon"><Icon name={i.icon}/></span>{i.label}{i.dot&&<UpdatesDot userId={user.id}/>}</NavLink>)}
           </div>
           {gi===0&&classRole&&<ClassList role={classRole} self={user.display_name}/>}
         </Fragment>)}
