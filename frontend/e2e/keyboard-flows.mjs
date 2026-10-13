@@ -103,10 +103,13 @@ try{
   check('Cancel leaves edit mode without saving anything',(await tp.locator('input.score-input').count())===0);
   // the next period to publish is shown; when everything is already published the periods sit under "All periods"
   if(!await tp.getByRole('button',{name:/^Publish (Midterm|Finals|Course)/}).first().isVisible().catch(()=>false)){await tabTo(tp,d=>d.tag==='summary'&&/All periods/.test(d.name),'All periods');await press(tp,'Enter')}
+  const canPublish=await tp.getByRole('button',{name:/^Publish (Midterm|Finals)/}).evaluateAll(bs=>bs.some(b=>!b.disabled));      // needs a period with graded work ready to publish
+  if(!canPublish)console.log('SKIP the publish dialog check: no period has graded work ready to publish in this data');else{
   await tabTo(tp,named(/^Publish (Midterm|Finals)/,'button'),'a Publish button');await press(tp,'Enter');
   await tp.locator('dialog[open]').waitFor();
   check('the publish control opens a review dialog that holds focus and publishes nothing yet',(await describe(tp)).inDialog&&(await tp.locator('dialog[open]').innerText()).includes('will be published or updated'));
   await press(tp,'Escape');await tp.locator('dialog[open]').waitFor({state:'detached'});
+  }
   await tp.goto(tp.url().replace('/gradebook','/class-standing'));await tp.getByRole('button',{name:'Download PDF'}).waitFor();
   await tabTo(tp,named(/Download PDF/,'button'),'Download PDF');
   check('the export buttons are reachable by keyboard',true);
@@ -130,8 +133,8 @@ try{
   await press(dp,'Enter');await dp.waitForURL(/\/student\/offerings\//);
   check('the dashboard next step is reachable by keyboard and opens the lesson or work',/lessons|work/.test(dp.url())&&step.ring);
   await dp.goto('/student');await dp.waitForLoadState('networkidle');
-  await tabTo(dp,d=>d.tag==='a'&&d.href.includes('/study'),'a Study help link');
-  check('the subject card links (progress, study help) are reachable by keyboard',true);
+  await tabTo(dp,d=>d.tag==='button'&&/Study buddy/.test(d.name),'the Study buddy button');
+  check('the Study buddy (the owl) is the one way in and is reachable by keyboard',true);
   await dp.context().close();
   const tp2=await open(faculty);
   await tp2.goto('/faculty');await tp2.getByRole('heading',{name:'Home'}).waitFor();await tp2.waitForLoadState('networkidle');

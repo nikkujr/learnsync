@@ -16,6 +16,7 @@ const sessions={admin:await sessionFor(browser,'admin@example.com'),faculty:awai
 // an in-progress attempt for the student: publish a throwaway quiz as faculty, start it as the student, archive it at the end
 const fp=await newPage(browser,{state:sessions.faculty});await fp.goto('/');
 const quizId=await createQuiz(fp,O,'Throwaway quiz for the state sweep');
+try{   // the throwaway quiz is archived even when a check throws
 const sp=await newPage(browser,{state:sessions.student});await sp.goto('/');
 const attemptPath=await sp.evaluate(async([o,quizId])=>{
   const csrf=(await (await fetch('/api/auth/session')).json()).csrf;
@@ -67,7 +68,7 @@ for(const scheme of ['light','dark'])for(const width of [1280,375]){
   if(attemptPath){const page=await newPage(browser,{...opts,state:sessions.student});await page.goto(attemptPath);await page.waitForLoadState('networkidle');await page.waitForTimeout(300);
     await audit(page,'student quiz attempt in progress',scheme,width);if(scheme==='light'&&width===1280)covered.push('student quiz attempt in progress');await page.context().close()}
 }
-await archiveTestContent(fp,O,{quiz:quizId});
+}finally{await archiveTestContent(fp,O,{quiz:quizId});}
 await browser.close();
 writeFileSync('../var/sweep-states.json',JSON.stringify({checked,covered,problems},null,1));
 console.log(JSON.stringify({checked,covered:covered.length,problems:problems.length},null,1));

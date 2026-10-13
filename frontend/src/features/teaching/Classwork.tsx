@@ -35,7 +35,7 @@ export function FacultyClasswork(){
   const offer=useUndo();
   const [create,setCreate]=useState<Create>(null);
   const [search,setSearch]=useState('');const [archived,setArchived]=useState(false);
-  const cat=catOf(useSearchParams()[0].get('type'),FACULTY_CATS);
+  const cat=catOf(useSearchParams()[0].get('type'),FACULTY_CATS);const topic=useSearchParams()[0].get('topic');
   const [statuses,setStatuses]=useState<Record<string,'all'|'published'|'draft'>>({});const status=statuses[cat]??'all';
   const [reorder,setReorder]=useState<string|null>(null);const [moved,setMoved]=useState('');
   const menu=useRef<HTMLDetailsElement>(null);
@@ -125,7 +125,7 @@ export function FacultyClasswork(){
       tree.length===0?<section className="panel"><h2>{search||status!=='all'?'Nothing matches':`No ${label.toLowerCase()} yet`}</h2><p>{search||status!=='all'?'Change the search or the filter.':'Use Create to add one.'}</p></section>:
       <>
       {stranded&&<p className="warn" role="status">Items cannot be reordered because some are attached to a topic that is no longer in the syllabus. <Link to={stranded.to}>Open “{stranded.title}”</Link> and choose a current topic.</p>}
-      {tree.map(n=>branch(n,0))}</>}
+      <div className="cw-layout"><TopicNav tree={tree}/><div className="cw-main">{inTopic(tree,topic).map(n=>branch(n,0))}</div></div></>}
     {create?.type==='item'&&<NewItemDialog offering={offering} nodes={nodes} kind={create.kind} onClose={()=>setCreate(null)} onCreated={i=>created(`${base}/content/${i.id}/edit`)}/>}
     {create?.type==='assessment'&&<NewDialog offering={offering} kind={create.kind} onClose={()=>setCreate(null)} onCreated={a=>created(`${base}/assessments/${a.id}/edit`)}/>}
     {create?.type==='ai'&&<GenerateDialog offering={offering} onClose={()=>setCreate(null)} onCreated={a=>created(`${base}/assessments/${a.id}/edit`)}/>}
@@ -138,6 +138,18 @@ type Filter='all'|'todo'|'done';
 
 interface TNode<T=SRow>{id:string;title:string;rows:T[];kids:TNode<T>[]}
 const total=<T,>(n:TNode<T>):number=>n.rows.length+n.kids.reduce((t,k)=>t+total(k),0);
+
+/** Classroom's left-hand topic list: "All topics" and one entry per chapter, kept in the address (?topic=) next to the type. */
+function TopicNav<T>({tree}:{tree:TNode<T>[]}){
+  const [params]=useSearchParams();const current=params.get('topic');
+  const to=(id:string|null)=>{const q=new URLSearchParams(params);if(id)q.set('topic',id);else q.delete('topic');const text=q.toString();return text?`?${text}`:'?'};
+  if(tree.length<2)return null;
+  const known=tree.some(n=>n.id===current);
+  return <nav className="topic-nav" aria-label="Topics"><Link to={to(null)} replace className={!known?'active':undefined} aria-current={!known?'page':undefined}>All topics</Link>
+    {tree.map(n=><Link key={n.id} to={to(n.id)} replace className={n.id===current?'active':undefined} aria-current={n.id===current?'page':undefined}>{n.title}<span className="tab-count">{total(n)}</span></Link>)}</nav>;
+}
+/** The branches to show: the chosen topic, or all of them when none (or a topic that no longer has anything) is chosen. */
+const inTopic=<T,>(tree:TNode<T>[],topic:string|null)=>topic&&tree.some(n=>n.id===topic)?tree.filter(n=>n.id===topic):tree;
 
 /** The syllabus as a tree (chapter, then topic or section, then topic) holding only the rows given; empty branches are dropped. */
 function buildTree<T extends {anchor:string|null}>(outline:Outline|undefined,rows:T[]):TNode<T>[]{
@@ -172,7 +184,7 @@ export function StudentClasswork(){
   const items=useQuery({queryKey:['learn-items',offering.id],queryFn:()=>api<LearnItem[]>(`/learn/offerings/${offering.id}/items`)});
   const work=useQuery({queryKey:['learn-work',offering.id],queryFn:()=>api<WorkRow[]>(`/learn/offerings/${offering.id}/assessments`)});
   const syllabus=useQuery({queryKey:['learn-syllabus',offering.id],queryFn:()=>api<LearnSyllabus>(`/learn/offerings/${offering.id}/syllabus`)});
-  const cat=catOf(useSearchParams()[0].get('type'));const here=useHere();
+  const cat=catOf(useSearchParams()[0].get('type'));const topic=useSearchParams()[0].get('topic');const here=useHere();
   const [filters,setFilters]=useState<Record<string,Filter>>({});const filter=filters[cat]??'all';      // each tab remembers its own filter
   const setFilter=(f:Filter)=>setFilters({...filters,[cat]:f});
   const error=items.error??work.error;if(error)return <p role="alert">{error.message}</p>;
@@ -204,6 +216,6 @@ export function StudentClasswork(){
         <div className="segmented" role="group" aria-label="Show">{([['all','Everything'],['todo',cat==='lesson'?'Not completed':'To do'],['done',cat==='lesson'?'Completed':'Done']] as const).map(([k,l])=>
           <button key={k} type="button" className={filter===k?'on':''} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l} <span className="muted">{count(k)}</span></button>)}</div></div>
       {shownRows.length===0?<section className="panel"><h2>{filter==='todo'?'Nothing to do':filter==='done'?'Nothing done yet':'Nothing here yet'}</h2><p className="muted">{filter==='todo'?'You are up to date.':filter==='done'?'Completed lessons and finished work appear here.':'Your teacher has not published any yet.'}</p></section>
-        :tree.length===1&&tree[0].id==='other'?<Branch node={tree[0]} depth={0} here={here} bare/>:tree.map(n=><Branch key={n.id} node={n} depth={0} here={here}/>)}</>}
+        :tree.length===1&&tree[0].id==='other'?<Branch node={tree[0]} depth={0} here={here} bare/>:<div className="cw-layout"><TopicNav tree={tree}/><div className="cw-main">{inTopic(tree,topic).map(n=><Branch key={n.id} node={n} depth={0} here={here}/>)}</div></div>}</>}
   </>;
 }

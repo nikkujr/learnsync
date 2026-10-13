@@ -8,7 +8,7 @@ import {Owl} from './Owl';
 import type {AllConversationsPage} from './types';
 
 const NONE:never[]=[];
-const DANCE_MS=2800,DANCE_EVERY_MIN=30000,DANCE_EVERY_SPREAD=40000;   // a dance every 30 to 70 seconds
+const DANCE_MS=2800,DANCE_EVERY_MIN=180000,DANCE_EVERY_SPREAD=120000;   // a dance every 3 to 5 minutes
 const SUBJECT_KEY=(uid:string)=>`learnsync:buddy-subject:${uid}`;
 const readSubject=(uid:string)=>{try{return localStorage.getItem(SUBJECT_KEY(uid))??''}catch{return ''}};
 

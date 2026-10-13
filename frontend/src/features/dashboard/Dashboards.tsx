@@ -57,7 +57,7 @@ export function StudentHome(){
       <div className="dash-grid home-more">
         <div className="dash-main">
           {d.next_step?<Hero eyebrow={d.next_step.type==='lesson'?'Your next step':'Your next task'} title={d.next_step.title} detail={d.next_step.subject} action={d.next_step.type==='lesson'?'Continue learning':'Open work'} to={d.next_step.link} icon="▤"/>
-            :<Hero eyebrow="Your next step" title="You’re up to date" detail={d.subjects.length?'Nothing is waiting for you right now. New lessons and work appear here when your teacher publishes them. You can review your subjects or ask study help about what you have learned.':'You are not enrolled in a current subject yet.'} action={d.subjects.length?(only?'Ask Study buddy':'See my subjects'):undefined} to={only?`/student/study-buddy?subject=${only.offering_id}`:'/student/subjects'} icon="✓"/>}
+            :<Hero eyebrow="Your next step" title="You’re up to date" detail={d.subjects.length?'Nothing is waiting for you right now. New lessons and work appear here when your teacher publishes them. You can review your subjects or ask study help about what you have learned.':'You are not enrolled in a current subject yet.'} action={d.subjects.length?'See my subjects':undefined} to="/student/subjects" icon="✓"/>}
           <section className="panel"><h2>Learning activity this week</h2>
             <p className="muted">Lessons, files and links you marked complete and quizzes or activities you submitted. Opening or reading something does not count.</p>
             <ol className="week" aria-label="Activity by day this week">{d.week.days.map(day=>
@@ -80,8 +80,7 @@ export function StudentHome(){
           <section className="panel"><h2>Course updates</h2>
             {d.updates.length===0?<p className="muted">No updates in the last 30 days.</p>:<ul className="rows updates">{d.updates.map((u,i)=><li key={i}><span className="eyebrow">{UPDATE_LABEL[u.type]??u.type} · {when(u.at)}{Date.parse(u.at)>seenBefore.current&&<> · <span className="badge">New</span></>}</span><Link state={here} to={u.link}>{u.title}</Link><span className="muted">{u.subject}</span></li>)}</ul>}
           </section>
-          <section className="panel"><h2>Need a little help?</h2><p className="muted">Ask a question about your learning materials. Answers cite the lessons they came from.</p>
-            <Link state={here} className="button" to={only?`/student/study-buddy?subject=${only.offering_id}`:'/student/subjects'}>{only?'Ask Study buddy':'Choose a subject'}</Link></section>
+
         </div>
       </div></>;
   }}</Page>;

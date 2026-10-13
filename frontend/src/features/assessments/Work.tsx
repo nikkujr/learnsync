@@ -11,7 +11,7 @@ import {useOrigin} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
 import {fmt,when,type AttemptView,type LearnItem} from './types';
 
-const STATE_LABEL:Record<string,string>={available:'Ready',in_progress:'In progress',not_open:'Not open yet',done:'Finished',closed:'Closed',submitted:'Submitted',resubmit:'Submitted · you can replace it'};
+const STATE_LABEL:Record<string,string>={available:'Assigned',in_progress:'In progress',not_open:'Not open yet',done:'Done',closed:'Closed',submitted:'Turned in',resubmit:'Turned in · you can resubmit'};
 
 function useWork(offeringId:string){
   return useQuery({queryKey:['learn-work',offeringId],queryFn:()=>api<LearnItem[]>(`/learn/offerings/${offeringId}/assessments`)});
@@ -72,7 +72,7 @@ export function WorkDetail(){
     e.preventDefault();setMessage('');
     const form=new FormData(e.currentTarget);   // read before awaiting
     setBusy(true);
-    try{await upload(`/learn/offerings/${offering.id}/assessments/${item!.id}/submissions`,form);setMessage('Submitted. Your teacher can see it now.');toast('Submitted. Your teacher can see it now.');await query.refetch()}
+    try{await upload(`/learn/offerings/${offering.id}/assessments/${item!.id}/submissions`,form);setMessage('Turned in. Your teacher can see it now.');toast('Turned in. Your teacher can see it now.');await query.refetch()}
     catch(err){setMessage(errorText(err))}finally{setBusy(false)}
   }
   return <>
@@ -91,10 +91,10 @@ export function WorkDetail(){
         {item.state==='not_open'&&<p>This quiz has not opened yet.</p>}{item.state==='closed'&&<p>The deadline has passed.</p>}{item.state==='done'&&<p>You have used all your attempts.</p>}</>}
       {item.kind==='activity'&&<>
         {item.state==='not_open'&&<p>This activity has not opened yet.</p>}
-        {item.can_submit?<form onSubmit={submitFile}><label>{item.submissions?.length?'Replace your submission with a new PDF':'Upload your work as a PDF'} (up to 20 MB)<input name="file" type="file" accept=".pdf,application/pdf" required/></label>
-          <label>Note for your teacher (optional)<textarea name="note" maxLength={2000}/></label>
+        {item.can_submit?<form onSubmit={submitFile}><label>{item.submissions?.length?'Add a new PDF to resubmit':'Add your work as a PDF'} (up to 20 MB)<input name="file" type="file" accept=".pdf,application/pdf" required/></label>
+          <label>Private comment to your teacher (optional)<textarea name="note" maxLength={2000}/></label>
           {item.would_be_late&&<p className="warn" role="status">The deadline has passed. This will be marked late.</p>}
-          <button className="primary" disabled={busy}>{busy?'Uploading…':'Submit'}</button></form>
+          <button className="primary" disabled={busy}>{busy?'Turning in…':item.submissions?.length?'Resubmit':'Turn in'}</button></form>
           :item.state!=='not_open'&&<p className="warn" role="status">{item.submissions?.length?'The deadline has passed, so your submission can no longer be replaced. Ask your teacher if you need to change it.':'The deadline has passed. Ask your teacher if you still need to submit.'}</p>}
         {item.submissions&&item.submissions.length>0&&<><h3>Your submissions</h3>
           <ul>{[...item.submissions].reverse().map(s=><li key={s.version}>Version {s.version} · {when(s.submitted_at)}{s.is_late?' · late':''} · <a className="touch" href={`/api/files/${s.file.id}/download`}>{s.file.name}</a>{s.note&&<span className="muted"> — {s.note}</span>}</li>)}</ul></>}</>}

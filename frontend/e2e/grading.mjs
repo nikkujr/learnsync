@@ -40,7 +40,7 @@ try{
   for(const state of S){const p=await newPage(browser,{state});await p.goto(`/student/offerings/${O}/classwork?type=activity`);await p.waitForLoadState('networkidle');
     await p.getByRole('link',{name:/Business idea pitch/}).first().click();await p.waitForLoadState('networkidle');
     await p.locator('input[type=file]').setInputFiles({name:'pitch.pdf',mimeType:'application/pdf',buffer:pdf});
-    await p.getByRole('button',{name:'Submit',exact:true}).click();await p.waitForTimeout(1200)}
+    await p.getByRole('button',{name:'Turn in',exact:true}).click();await p.waitForTimeout(1200)}
   await teach.goto('/faculty/review');await teach.waitForLoadState('networkidle');
   await teach.getByRole('link',{name:'Open and grade'}).first().click();await teach.waitForLoadState('networkidle');
   const base=`/teach/offerings/${O}/assessments/${teach.url().match(/assessments\/([\w-]+)\/scores/)[1]}`;
