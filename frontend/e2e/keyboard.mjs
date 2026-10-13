@@ -1,5 +1,5 @@
 // Keyboard and theme behaviour: skip link, dialog focus restoration, visible focus, live theme switching.
-import {launch,newPage,sessionFor,autoConfirm} from './lib.mjs';
+import {launch,newPage,sessionFor,autoConfirm,themeSelect} from './lib.mjs';
 const results=[];
 const check=(label,ok,detail='')=>{results.push(ok);console.log(`${ok?'PASS':'FAIL'} ${label}${detail?' - '+detail:''}`)};
 const browser=await launch();
@@ -31,27 +31,27 @@ check('Escape closes it and returns focus to the button that opened it',await pa
 // theme: explicit choice wins; "System" follows the operating system, live
 const bg=()=>page.evaluate(()=>getComputedStyle(document.body).backgroundColor);
 await page.emulateMedia({colorScheme:'light'});
-await page.getByLabel('Theme').selectOption('system');await page.waitForTimeout(200);
+await (await themeSelect(page)).selectOption('system');await page.waitForTimeout(200);
 const light=await bg();
 await page.emulateMedia({colorScheme:'dark'});await page.waitForTimeout(300);
 const dark=await bg();
 check('"System" follows the operating system theme while the page is open',light!==dark,`${light} -> ${dark}`);
-await page.getByLabel('Theme').selectOption('light');await page.waitForTimeout(200);
+await (await themeSelect(page)).selectOption('light');await page.waitForTimeout(200);
 check('choosing Light overrides a dark operating system',await bg()===light);
 // the choice is saved to the account: it survives a reload even though a saved preference exists
 await page.emulateMedia({colorScheme:'light'});
-await page.getByLabel('Theme').selectOption('dark');await page.waitForTimeout(600);
-await page.reload();await page.getByLabel('Theme').waitFor();await page.waitForTimeout(400);
+await (await themeSelect(page)).selectOption('dark');await page.waitForTimeout(600);
+await page.reload();await themeSelect(page);await page.waitForTimeout(400);
 check('a theme chosen in the header is still applied after a reload',await page.evaluate(()=>document.documentElement.dataset.theme==='dark'));
-await page.getByLabel('Theme').selectOption('system');await page.waitForTimeout(600);   // leave the shared admin preference as found
+await (await themeSelect(page)).selectOption('system');await page.waitForTimeout(600);   // leave the shared admin preference as found
 
 // signing out ends the session and leaves nothing behind for the Back button
 const out=await newPage(browser,{state:await sessionFor(browser,'student1@example.com')});
-await out.goto('/student');await out.getByRole('heading',{name:/keep learning/}).waitFor();
+await out.goto('/student');await out.getByRole('heading',{name:'Home'}).waitFor();
 autoConfirm(out);
-await out.getByRole('button',{name:'Sign out'}).click();await out.waitForURL(/\/login/);
+await out.locator('details.account summary').click();await out.getByRole('button',{name:'Sign out'}).click();await out.waitForURL(/\/login/);
 await out.goBack();await out.waitForLoadState('networkidle');
-check('after sign-out the Back button does not show the dashboard',await out.getByRole('heading',{name:/keep learning/}).count()===0&&/\/login/.test(out.url()));
+check('after sign-out the Back button does not show the dashboard',await out.getByRole('heading',{name:'Home'}).count()===0&&/\/login/.test(out.url()));
 check('and the account data is no longer reachable',(await out.evaluate(async()=>(await fetch('/api/dashboard/student')).status))===401);
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

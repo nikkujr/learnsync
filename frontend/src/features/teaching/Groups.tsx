@@ -4,7 +4,7 @@ import {SubTabs} from '../../components/SubTabs';
 /** The pages that share one main tab keep their own routes and get a quiet second row of links. */
 export function PeopleLayout(){
   const context=useOutletContext();const {offeringId}=useParams();const base=`/faculty/offerings/${offeringId}`;
-  return <><SubTabs label="People" items={[{to:base,label:'Students',end:true},{to:`${base}/attendance`,label:'Attendance'},{to:`${base}/progress`,label:'Progress'}]}/><Outlet context={context}/></>;
+  return <><SubTabs label="People" items={[{to:`${base}/people`,label:'Students',end:true},{to:`${base}/attendance`,label:'Attendance'},{to:`${base}/progress`,label:'Progress'}]}/><Outlet context={context}/></>;
 }
 
 export function GradesLayout(){

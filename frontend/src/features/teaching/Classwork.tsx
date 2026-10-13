@@ -56,7 +56,7 @@ export function FacultyClasswork(){
         meta:`${KIND_LABEL[a.kind]}${rev?.ai_generated?` · AI draft${rev.reviewed?' reviewed':' needs review'}`:''}${rev?.include_in_grade?` · ${fmt(rev.max_points??0)} pts`:' · not graded'}${a.published?.deadline?` · due ${new Date(a.published.deadline).toLocaleDateString()}`:''}`}})];
   const match=(r:Row)=>r.title.toLowerCase().includes(search.trim().toLowerCase());
   const byStatus=(r:Row,k:'all'|'published'|'draft')=>k==='all'||(k==='published'?r.published&&!r.pending:!r.published||r.pending);   // Drafts: never published, or a newer draft waiting to be published
-  const shown=(r:Row)=>r.cat===cat&&(archived||!r.archived)&&match(r)&&byStatus(r,status);
+  const shown=(r:Row)=>(cat==='all'||r.cat===cat)&&(archived||!r.archived)&&match(r)&&byStatus(r,status);
   const outline=syllabus.data?.draft?.outline??syllabus.data?.published?.outline;
   const known=new Set(nodes.map(n=>n.id));
   const tree=buildTree(outline,rows.filter(shown));
@@ -83,22 +83,22 @@ export function FacultyClasswork(){
   const created=(to:string)=>{setCreate(null);queryClient.invalidateQueries({queryKey:['items',offering.id]});queryClient.invalidateQueries({queryKey:['assessments',offering.id]});navigate(to)};
 
   const stranded=rows.find(r=>r.type==='item'&&r.anchor&&!known.has(r.anchor));   // its topic left the syllabus: fix it before reordering
-  const count=(k:'all'|'published'|'draft')=>rows.filter(r=>r.cat===cat&&(archived||!r.archived)&&byStatus(r,k)).length;
+  const count=(k:'all'|'published'|'draft')=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(archived||!r.archived)&&byStatus(r,k)).length;
   const branch=(n:TNode<Row>,depth:number):React.ReactElement=>{
     const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];
     const items=n.rows.filter(r=>r.type==='item');
     return <section key={n.id} className={`tree d${Math.min(depth,2)}`} aria-labelledby={`c-${n.id}`}>
       <header><Heading id={`c-${n.id}`}>{n.title}</Heading><span className="count">{total(n)}</span>
         {items.length>1&&!closed&&!stranded&&<button type="button" className="linklike" aria-pressed={reorder===n.id} onClick={()=>setReorder(reorder===n.id?null:n.id)}>{reorder===n.id?'Done reordering':'Reorder'}</button>}</header>
-      {n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=><li key={r.key}>
+      {n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=><li key={r.key} data-cat={r.cat}>
         <span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
         <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span>{r.canUnpublish&&!closed&&<button type="button" className="linklike" onClick={()=>unpublish(r)}>Unpublish</button>}
         {reorder===n.id&&r.type==='item'&&<span className="actions"><button type="button" aria-label={`Move ${r.title} up`} disabled={closed||items.indexOf(r)===0} onClick={()=>move(n,items,r,-1)}>↑</button>
           <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>)}</ul>}
       {n.kids.map(k=>branch(k,depth+1))}</section>};
-  const label=FACULTY_CATS.find(c=>c[0]===cat)![1];
+  const label=FACULTY_CATS.find(c=>c[0]===cat)?.[1]??'classwork';
   return <>
-    <div className="type-row"><ClassworkTypes base={base} cats={FACULTY_CATS} current={cat} counts={Object.fromEntries(FACULTY_CATS.map(([k])=>[k,rows.filter(r=>r.cat===k&&(archived||!r.archived)).length]))}/>
+    <div className="type-row"><ClassworkTypes base={base} cats={FACULTY_CATS} current={cat} counts={{all:rows.filter(r=>archived||!r.archived).length,...Object.fromEntries(FACULTY_CATS.map(([k])=>[k,rows.filter(r=>r.cat===k&&(archived||!r.archived)).length]))}}/>
       <details className="dropdown" ref={menu}><summary className={`button primary${closed?' disabled':''}`} aria-disabled={closed} onClick={e=>{if(closed)e.preventDefault()}}>+ Create</summary>
         <div className="menu-list" role="group" aria-label="Create">{CREATE.map(([label,target],i)=><span key={label} className="menu-item">{(i===3||i===8)&&<hr/>}
           <button type="button" onClick={()=>choose(target)}>{label}</button></span>)}</div></details></div>
@@ -146,7 +146,7 @@ function Branch({node,depth,here,bare=false}:{node:TNode;depth:number;here:{from
   const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];
   return <section className={`tree d${Math.min(depth,2)}`} aria-labelledby={`t-${node.id}`}>
     {bare?<h3 id={`t-${node.id}`} className="sr-only">{node.title}</h3>:<header><Heading id={`t-${node.id}`}>{node.title}</Heading><span className="count">{total(node)}</span></header>}
-    {node.rows.length>0&&<ul className="seq compact">{[...node.rows].sort((a,b)=>rank(a)-rank(b)).map(r=><li key={r.key} className={r.chips.some(c=>c.cls==='next')?'next':undefined}>
+    {node.rows.length>0&&<ul className="seq compact">{[...node.rows].sort((a,b)=>rank(a)-rank(b)).map(r=><li key={r.key} data-cat={r.cat} className={r.chips.some(c=>c.cls==='next')?'next':undefined}>
       <span className="grow"><Link state={here} to={r.to}>{r.title}</Link>{(r.detail||r.result)&&<span className="muted">{r.detail}{r.detail&&r.result?' · ':''}{r.result&&<strong>{r.result}</strong>}</span>}</span>
       {r.chips.map(c=><span key={c.text} className={`badge ${c.cls??''}`}>{c.text}</span>)}
       {r.kind==='item'&&r.todo&&<Link state={here} className="start" to={r.to} title="Open this" aria-hidden="true" tabIndex={-1}>▶</Link>}</li>)}</ul>}
@@ -179,16 +179,16 @@ export function StudentClasswork(){
       chips:[...(w===nearest?[{text:'Up next',cls:'next'}]:[]),...(w.state==='in_progress'?[{text:'In progress'}]:[]),...(w.late_allowed?[{text:'Late submission allowed',cls:'warn'}]:[])],
       todo:w.bucket==='todo'||w.bucket==='again',done:w.bucket==='done'||w.bucket==='awaiting',
       result:w.result?`Your result: ${fmt(w.result.score)} / ${fmt(w.result.max_points)}`:undefined}))];
-  const want=(r:SRow)=>r.cat===cat&&(filter==='all'||(filter==='todo'?r.todo:r.done));
+  const want=(r:SRow)=>(cat==='all'||r.cat===cat)&&(filter==='all'||(filter==='todo'?r.todo:r.done));
   const outline=syllabus.data?.published?.outline;
   const shownRows=rows.filter(want);
   const tree=buildTree(outline,shownRows);
-  const count=(k:Filter)=>rows.filter(r=>r.cat===cat&&(k==='all'||(k==='todo'?r.todo:r.done))).length;
+  const count=(k:Filter)=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(k==='all'||(k==='todo'?r.todo:r.done))).length;
   return <>
     {rows.length===0?<section className="panel"><h2>Nothing yet</h2><p>Published lessons, files, links, quizzes and activities appear here.</p></section>:<>
-      <div className="type-row"><ClassworkTypes base={base} current={cat} counts={Object.fromEntries(CATS.map(([k])=>[k,rows.filter(r=>r.cat===k).length]))}/></div>
+      <div className="type-row"><ClassworkTypes base={base} current={cat} counts={{all:rows.length,...Object.fromEntries(CATS.map(([k])=>[k,rows.filter(r=>r.cat===k).length]))}}/></div>
       <div className="cw-bar">
-        {cat==='lesson'&&lessons.length>0&&<div className="seq-head"><p><strong>{finished} of {lessons.length}</strong> complete</p>
+        {(cat==='lesson'||cat==='all')&&lessons.length>0&&<div className="seq-head"><p><strong>{finished} of {lessons.length}</strong> complete</p>
           {next&&<Link className="button primary" to={`${base}/lessons/${next.id}`}>Continue: {next.title}</Link>}</div>}
         <div className="segmented" role="group" aria-label="Show">{([['all','Everything'],['todo',cat==='lesson'?'Not completed':'To do'],['done',cat==='lesson'?'Completed':'Done']] as const).map(([k,l])=>
           <button key={k} type="button" className={filter===k?'on':''} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l} <span className="muted">{count(k)}</span></button>)}</div></div>

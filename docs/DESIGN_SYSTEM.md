@@ -16,7 +16,7 @@ Public: `/login`, `/forgot-password`, `/reset-password`, `/accept-invitation`. S
 
 Admin (`/admin/...`): `academics` (school years and terms), `terms/:termId`, `terms/:termId/import-students`, `subjects`, `subjects/import`, `subjects/import/:importId`, `offerings/:offeringId` (roster), `accounts`, `issues` (reports), `audit`.
 
-Faculty (`/faculty/...`): `subjects`, `issues` (report a problem), and per offering `offerings/:offeringId` with tabs `` (students), `syllabus`, `content`, `content/:itemId/edit`, `assessments`, `assessments/:assessmentId/edit`, `assessments/:assessmentId/scores`, `attendance`, `gradebook` (publish grades and export), `progress`, `announcements`.
+Faculty (`/faculty/...`): `subjects`, `issues` (report a problem), and per offering `offerings/:offeringId` with tabs `people` (students; the bare `offerings/:offeringId` address redirects to `stream`), `syllabus`, `content`, `content/:itemId/edit`, `assessments`, `assessments/:assessmentId/edit`, `assessments/:assessmentId/scores`, `attendance`, `gradebook` (publish grades and export), `progress`, `announcements`.
 
 Student (`/student/...`): `subjects`, `issues`, and per offering `offerings/:offeringId` with tabs `syllabus`, `lessons`, `lessons/:itemId`, `study`, `work`, `work/:assessmentId`, `work/:assessmentId/attempts/:attemptId`, `progress`, `results`, `announcements`. A withdrawn student sees only `results`.
 
@@ -36,3 +36,9 @@ Use `useToast()` for a one-line result of an action that is not already obvious 
 
 ## File and link pages
 A file page shows the PDF in a frame or the picture inline (never anything else), then a Download button with the size; a link page is a card with the site name, the teacher's note, one "Open the link" button that opens a new tab with `rel="noopener noreferrer"`, and the address in small text. All three kinds end with the same "Mark lesson / file / link as complete" button and the same Next item.
+
+## Classroom look (2026-10-13)
+- Top bar (menu button, wordmark, avatar menu holding theme, account settings and Sign out) and a light drawer: Home, To-do / To review, the user's open classes (round coloured initial, title, code and section), then All subjects, Report a problem, Settings. The drawer is open on desktop by default (remembered), an overlay with a scrim on phones.
+- Home leads with class cards: coloured header (title, section, teacher), round teacher avatar, short body (items to do, progress), shortcuts Classwork and Grades. The rest of the old dashboard sits below under the cards. A class colour comes from its id (`components/classes.tsx`, ten colours, each 4.5:1 with white text).
+- A subject page opens on Stream with a banner; other tabs show a compact title row. Stream is Upcoming on the left and one column of posts (round icon, "X posted a new lesson", date) with an announcement composer for faculty. Classwork opens on All (every type, grouped by syllabus topic, round type icons); the type pills are an optional filter.
+- Student work pages are two columns: the task, then a Your work card.

@@ -5,11 +5,11 @@ import {api} from '../../app/api';
 import {useHere} from '../../components/origin';
 import {useAuth} from '../../app/providers';
 import {markSeen,readSeen} from '../../components/seen';
+import {classColor,initials,useClasses} from '../../components/classes';
 
 export const when=(iso:string)=>new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 const dateTime=(iso:string)=>new Date(iso).toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
 const today=()=>new Date().toLocaleDateString(undefined,{weekday:'long',day:'2-digit',month:'long'});
-const greeting=()=>{const h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening'};
 const plural=(n:number,one:string,many=one+'s')=>`${n} ${n===1?one:many}`;
 
 function Page<T>({query,children}:{query:{isPending:boolean;error:Error|null;data?:T};children:(data:T)=>React.ReactNode}){
@@ -43,13 +43,18 @@ export function StudentHome(){
   const here=useHere();const {session}=useAuth();const uid=session?.user?.id??'';
   const seenBefore=useRef(readSeen(uid));          // fixed for this visit so the "New" tags stay readable
   const query=useQuery(studentHomeQuery);
+  const teachers=new Map((useClasses('student','').data??[]).map(c=>[c.id,c]));
   const latest=query.data?.updates[0]?.at;
   useEffect(()=>{if(latest)markSeen(uid,latest)},[uid,latest]);
   return <Page query={query}>{d=>{
-    const first=d.name.split(' ')[0];const only=d.subjects.length===1?d.subjects[0]:null;
+    const only=d.subjects.length===1?d.subjects[0]:null;
     return <>
-      <Heading eyebrow="Student dashboard" title={`Let’s keep learning, ${first}.`} line="One clear next step, with everything else close by."/>
-      <div className="dash-grid">
+      <h1 className="sr-only">Home</h1>
+      <section aria-labelledby="subjects-h"><h2 id="subjects-h" className="sr-only">Your classes</h2>
+        {d.subjects.length===0?<p className="panel muted">No current subjects. You are not enrolled in a current subject yet.</p>:<div className="class-grid">{d.subjects.map(s=>{const c=teachers.get(s.offering_id);
+          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={c?.section??s.code} teacher={c?.teacher??''} meta={s.to_do?plural(s.to_do,'item')+' to do':'Nothing to do'}
+            progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Grades',`/student/offerings/${s.offering_id}/results`]]}/>})}</div>}</section>
+      <div className="dash-grid home-more">
         <div className="dash-main">
           {d.next_step?<Hero eyebrow={d.next_step.type==='lesson'?'Your next step':'Your next task'} title={d.next_step.title} detail={d.next_step.subject} action={d.next_step.type==='lesson'?'Continue learning':'Open work'} to={d.next_step.link} icon="▤"/>
             :<Hero eyebrow="Your next step" title="You’re up to date" detail={d.subjects.length?'Nothing is waiting for you right now. New lessons and work appear here when your teacher publishes them. You can review your subjects or ask study help about what you have learned.':'You are not enrolled in a current subject yet.'} action={d.subjects.length?(only?'Ask Study buddy':'See my subjects'):undefined} to={only?`/student/study-buddy?subject=${only.offering_id}`:'/student/subjects'} icon="✓"/>}
@@ -62,9 +67,6 @@ export function StudentHome(){
             <Stats items={[[d.week.lessons_today,'Lessons completed today'],[d.week.work_today,'Quizzes and activities submitted today']]}/>
             {only&&<Link state={here} className="button" to={`/student/offerings/${only.offering_id}/progress`}>View my progress</Link>}
           </section>
-          <section aria-labelledby="subjects-h"><div className="section-head"><h2 id="subjects-h">My subjects</h2><Link state={here} to="/student/subjects">All subjects, including past terms</Link></div>
-            {d.subjects.length===0?<p className="panel muted">No current subjects.</p>:<div className="cards">{d.subjects.map(s=><SubjectCard key={s.offering_id} code={s.code} title={s.title} meta={s.to_do?plural(s.to_do,'item')+' to do':'Nothing to do'}
-              progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/classwork`} action="Open" links={[['Progress',`/student/offerings/${s.offering_id}/progress`],['Study buddy',`/student/study-buddy?subject=${s.offering_id}`]]}/>)}</div>}</section>
         </div>
         <div className="dash-side">
           <section className="panel"><h2>To do</h2>
@@ -85,13 +87,16 @@ export function StudentHome(){
   }}</Page>;
 }
 
-export function SubjectCard({code,title,meta,progress,detail,to,action,links}:{code:string;title:string;meta:string;progress?:number|null;detail?:string;to:string;action:string;links:[string,string][]}){
+/** A Classroom-style class card: coloured header with title, section and teacher, a round avatar, a short body and shortcuts. The whole header opens the class. */
+export function SubjectCard({id,title,section,teacher,meta,progress,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;detail?:string;to:string;links:[string,string][]}){
   const here=useHere();
-  return <article className="subject-card"><div className="subject-top"><span className="eyebrow">{code}</span><span className="badge">{meta}</span></div>
-    <h3>{title}</h3>
-    {progress!==undefined&&progress!==null&&<><div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div></>}
-    {detail&&<p className="muted">{detail}</p>}
-    <div className="subject-foot"><span>{links.map(([l,h],i)=><span key={h}>{i>0&&' · '}<Link state={here} to={h}>{l}</Link></span>)}</span><Link state={here} className="open" to={to}>{action} →</Link></div></article>;
+  return <article className="class-card" style={{'--cc':classColor(id)} as React.CSSProperties}>
+    <div className="class-head"><h3><Link state={here} to={to}>{title}</Link></h3><p>{section}</p>{teacher&&<p>{teacher}</p>}</div>
+    <span className="class-avatar" aria-hidden="true">{initials(teacher||title)}</span>
+    <div className="class-body">{meta&&<p><strong>{meta}</strong></p>}
+      {progress!==undefined&&progress!==null&&<div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div>}
+      {detail&&<p>{detail}</p>}</div>
+    <div className="class-foot">{links.map(([l,h])=><Link key={h} state={here} to={h}>{l}</Link>)}</div></article>;
 }
 
 // ---------------------------------------------------------------- faculty
@@ -104,17 +109,19 @@ export function FacultyHome(){
   const query=useQuery({queryKey:['dashboard','faculty'],queryFn:()=>api<FacultyHomeData>('/dashboard/faculty')});
   return <Page query={query}>{d=>{
     return <>
-      <Heading eyebrow="Staff dashboard" title={`${greeting()}, ${d.name}.`} line="Your subjects, teaching tasks and grading at a glance."/>
-      <div className="dash-grid">
+      <h1 className="sr-only">Home</h1>
+      <section aria-labelledby="my-subjects-h"><h2 id="my-subjects-h" className="sr-only">Your classes</h2>
+        {d.subjects.length===0?<p className="panel muted">No subjects are assigned to you in an open term.</p>:<div className="class-grid">{d.subjects.map(s=>{
+          const o=`/faculty/offerings/${s.offering_id}`;const drafts=s.drafts_content+s.drafts_assessments;
+          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={s.sections.join(', ')||'No sections'} teacher={d.name} meta={s.to_grade?`${s.to_grade} to grade`:undefined}
+            detail={`${plural(s.students,'student')}${s.needs_review?` · ${s.needs_review} to review`:''}${drafts?` · ${plural(drafts,'draft')}`:''}`}
+            to={`${o}/stream`} links={[['Classwork',`${o}/classwork`],['Grades',`${o}/gradebook`]]}/>})}</div>}
+        <p><Link state={here} className="touch" to="/faculty/subjects">{d.closed_subjects?`All subjects, including ${plural(d.closed_subjects,'past one')}`:'All subjects'}</Link></p></section>
+      <div className="dash-grid home-more">
         <div className="dash-main">
           {d.task?<Hero eyebrow="Your next teaching task" title={d.task.headline} detail={d.task.detail} action={d.task.action} to={d.task.link} icon={d.task.icon}/>
             :<Hero eyebrow="Your next teaching task" title="Nothing is waiting for you" detail="No activity submissions to grade, no grades to review and no drafts in progress." icon="✓"/>}
           <Stats items={[[d.totals.subjects,'Assigned subjects in open terms'],[d.totals.students,'Subject enrollments'],[d.totals.to_grade,'Activity submissions to grade',d.queue[0]?.link],[d.totals.needs_review,'Students with grades to review',d.review_link??undefined]]}/>
-          <section aria-labelledby="my-subjects-h"><div className="section-head"><h2 id="my-subjects-h">My subjects</h2><Link state={here} to="/faculty/subjects">{d.closed_subjects?`All subjects, including ${plural(d.closed_subjects,'past one')}`:'All subjects'}</Link></div>
-            {d.subjects.length===0?<p className="panel muted">No subjects are assigned to you in an open term.</p>:<div className="cards">{d.subjects.map(s=>{
-              const o=`/faculty/offerings/${s.offering_id}`;const drafts=s.drafts_content+s.drafts_assessments;
-              return <SubjectCard key={s.offering_id} code={s.code} title={s.title} meta="Assigned" detail={`${s.sections.join(', ')||'No sections'} · ${plural(s.students,'student')}${s.to_grade?` · ${s.to_grade} to grade`:''}${s.needs_review?` · ${s.needs_review} to review`:''}${drafts?` · ${plural(drafts,'draft')}`:''}`}
-                to={o} action="Teach" links={[['Classwork',`${o}/classwork`],['Gradebook',`${o}/gradebook`]]}/>})}</div>}</section>
         </div>
         <div className="dash-side">
           {d.queue.length>0&&<section className="panel"><h2>Activity submissions needing grading</h2><p className="muted">Top 5 by number awaiting grading. <Link state={here} className="touch" to="/faculty/review">See everything to review</Link></p><ul className="rows">{d.queue.map((q,i)=><li key={i}><Link state={here} to={q.link}>{q.title}</Link><span className="muted">{q.subject} · {plural(q.count,'submission')} waiting</span></li>)}</ul></section>}
@@ -173,9 +180,9 @@ export function AdminHome(){
 export function StudentTodo(){
   const here=useHere();
   const query=useQuery({queryKey:['todo','student'],queryFn:()=>api<{todo:Work[];awaiting_feedback:Work[];another_attempt:Work[]}>('/dashboard/student/todo')});
-  const row=(w:Work,note:string)=><li key={w.assessment_id}><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {w.kind==='online_quiz'?'Quiz':'Activity'} · {note}</span></li>;
-  const group=(title:string,hint:string,items:Work[],note:(w:Work)=>string)=><section className="panel" key={title}><h2>{title}</h2><p className="muted">{hint}</p>
-    {items.length===0?<p className="muted">Nothing here.</p>:<ul className="rows">{items.map(w=>row(w,note(w)))}</ul>}</section>;
+  const row=(w:Work,note:string)=><li key={w.assessment_id} data-cat={w.kind==='online_quiz'?'quiz':'activity'}><span className="grow"><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {w.kind==='online_quiz'?'Quiz':'Activity'} · {note}</span></span></li>;
+  const group=(title:string,hint:string,items:Work[],note:(w:Work)=>string)=><section className="tree d0" key={title}><header><h2>{title}</h2><span className="count">{items.length}</span></header><p className="muted">{hint}</p>
+    {items.length===0?<p className="muted">Nothing here.</p>:<ul className="seq compact">{items.map(w=>row(w,note(w)))}</ul>}</section>;
   return <>
     <div className="page-heading"><div><p className="eyebrow">All subjects</p><h1>To do</h1><p className="muted">Quizzes and activities from every current subject, earliest deadline first.</p></div></div>
     <Page query={query}>{d=>{

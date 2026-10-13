@@ -74,3 +74,6 @@ export function autoConfirm(page){
   page.on('dialog',d=>d.accept().catch(()=>{}));
   page.addLocatorHandler(page.locator('dialog[data-confirm]'),async d=>{await d.locator('[data-confirm-yes]').click()});
 }
+
+// The account menu (avatar, top right) holds the theme choice and Sign out. Opens it if closed and returns the page's Theme select.
+export async function themeSelect(page){const d=page.locator('details.account');if(!(await d.evaluate(e=>e.open)))await d.locator('summary').click();return page.getByLabel('Theme')}

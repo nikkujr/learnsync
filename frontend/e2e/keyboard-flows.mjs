@@ -91,7 +91,7 @@ try{
   await tabTo(tp,named(/Keep my version/,'button'),'Keep my version');await press(tp,'Enter');await tp.waitForTimeout(1500);
   check('an edit conflict is resolved with the keyboard and saving resumes',(await tp.locator('.save-indicator').innerText()).includes('Saved'));
   await tabTo(tp,named(/^Publish$/,'button'),'Publish');await press(tp,'Enter');await tp.waitForURL(/\/classwork$/);
-  check('the lesson is published with the keyboard',(await tp.locator('main').innerText()).includes('Published v1'));
+  check('the lesson is published with the keyboard',await tp.locator('li',{hasText:'Keyboard walkthrough lesson'}).filter({hasText:'Published v1'}).first().waitFor({timeout:8000}).then(()=>true,()=>false));
 
   // ---------- C. gradebook: edit a score, reach the publish control ----------
   await tp.goto(`/faculty/offerings/${O}/gradebook`);await tp.getByRole('heading',{name:'Gradebook'}).waitFor();await tp.waitForLoadState('networkidle');
@@ -118,10 +118,10 @@ try{
 
   // ---------- D. phone navigation ----------
   const mp=await open(student,{width:375,height:812});
-  await mp.goto('/student');await mp.getByRole('heading',{name:/keep learning/}).waitFor();
+  await mp.goto('/student');await mp.getByRole('heading',{name:'Home'}).waitFor();
   await tabTo(mp,named(/Toggle navigation/,'button'),'the menu button');check('the menu button announces it is collapsed',(await describe(mp)).expanded==='false');
   await press(mp,'Enter');check('Enter opens the menu and reports it expanded',(await describe(mp)).expanded==='true');
-  await tabTo(mp,d=>d.tag==='a'&&/My subjects/.test(d.name),'My subjects');await press(mp,'Enter');await mp.waitForURL(/\/student\/subjects$/);
+  await tabTo(mp,d=>d.tag==='a'&&/All subjects/.test(d.name),'All subjects');await press(mp,'Enter');await mp.waitForURL(/\/student\/subjects$/);
   check('a menu link navigates and the menu closes again',(await mp.locator('.sidebar.open').count())===0);
   await tabTo(mp,named(/Toggle navigation/,'button'),'the menu button',{back:true});await press(mp,'Enter');await press(mp,'Escape');
   check('Escape closes an open menu',(await mp.locator('.sidebar.open').count())===0);
@@ -129,7 +129,7 @@ try{
 
   // ---------- D2. the dashboards: reach the next step and the lists with the keyboard ----------
   const dp=await open(student);
-  await dp.goto('/student');await dp.getByRole('heading',{name:/keep learning/}).waitFor();await dp.waitForLoadState('networkidle');
+  await dp.goto('/student');await dp.getByRole('heading',{name:'Home'}).waitFor();await dp.waitForLoadState('networkidle');
   const step=await tabTo(dp,d=>d.tag==='a'&&/Continue learning|Open work/.test(d.name),'the next-step button');
   await press(dp,'Enter');await dp.waitForURL(/\/student\/offerings\//);
   check('the dashboard next step is reachable by keyboard and opens the lesson or work',/lessons|work/.test(dp.url())&&step.ring);
@@ -138,8 +138,8 @@ try{
   check('the subject card links (progress, study help) are reachable by keyboard',true);
   await dp.context().close();
   const tp2=await open(faculty);
-  await tp2.goto('/faculty');await tp2.getByRole('heading',{name:/Good (morning|afternoon|evening)/}).waitFor();await tp2.waitForLoadState('networkidle');
-  await tabTo(tp2,d=>d.tag==='a'&&/^Teach/.test(d.name),'the Teach link');await press(tp2,'Enter');await tp2.waitForURL(/\/faculty\/offerings\//);
+  await tp2.goto('/faculty');await tp2.getByRole('heading',{name:'Home'}).waitFor();await tp2.waitForLoadState('networkidle');
+  await tabTo(tp2,d=>d.tag==='a'&&/\/faculty\/offerings\/[^/]+\/stream$/.test(d.href),'a class card title');await press(tp2,'Enter');await tp2.waitForURL(/\/faculty\/offerings\//);
   check('a faculty subject card opens its subject with the keyboard',true);
   await tp2.context().close();
 

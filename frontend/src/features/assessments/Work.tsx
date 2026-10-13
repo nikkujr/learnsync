@@ -78,10 +78,12 @@ export function WorkDetail(){
   return <>
     <ClassworkTypes base={`/student/offerings/${offering.id}`} current={item.kind==='online_quiz'?'quiz':'activity'}/>
     <p className="back"><Link to={origin.to}>← Back to {origin.label}</Link></p>
-    <section className="panel"><p className="eyebrow">{item.kind==='online_quiz'?'Quiz':'Activity'} · {STATE_LABEL[item.state]??item.state}</p><h2>{item.title}</h2>
+    <div className="assignment"><article className="panel"><p className="eyebrow">{item.kind==='online_quiz'?'Quiz':'Activity'}</p><h2>{item.title}</h2>
       {item.instructions&&<p className="pre">{item.instructions}</p>}
       <p className="muted">{item.available_from?`Opens ${when(item.available_from)}. `:''}{item.deadline?`Due ${when(item.deadline)}.${item.allow_late?' Late work is accepted.':''}`:'No deadline.'} Worth {fmt(item.max_points)} points.</p>
       {item.result&&<p role="status"><strong>Released result: {fmt(item.result.score)} / {fmt(item.result.max_points)}</strong>{item.result.feedback&&<><br/>{item.result.feedback}</>}</p>}
+      </article>
+      <aside className="panel" aria-label="Your work"><h3>Your work</h3><p><strong>{STATE_LABEL[item.state]??item.state}</strong></p>
       {message&&<p role="status">{message}</p>}
       {item.kind==='online_quiz'&&<>
         <p className="muted">Attempts used: {item.attempts_used??0} of {item.max_attempts}. Your answers are saved as you go.</p>
@@ -96,7 +98,7 @@ export function WorkDetail(){
           :item.state!=='not_open'&&<p className="warn" role="status">{item.submissions?.length?'The deadline has passed, so your submission can no longer be replaced. Ask your teacher if you need to change it.':'The deadline has passed. Ask your teacher if you still need to submit.'}</p>}
         {item.submissions&&item.submissions.length>0&&<><h3>Your submissions</h3>
           <ul>{[...item.submissions].reverse().map(s=><li key={s.version}>Version {s.version} · {when(s.submitted_at)}{s.is_late?' · late':''} · <a className="touch" href={`/api/files/${s.file.id}/download`}>{s.file.name}</a>{s.note&&<span className="muted"> — {s.note}</span>}</li>)}</ul></>}</>}
-    </section></>;
+    </aside></div></>;
 }
 
 const keyFor=(attemptId:string)=>{

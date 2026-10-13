@@ -27,16 +27,16 @@ export function FacultyAnnouncements(){
   }
   const names=(ids:string[])=>ids.length===0?'All sections':ids.map(id=>offering.sections.find(s=>s.id===id)?.name??'').join(', ');
   return <>
-    <div className="page-heading"><div><h2>Stream</h2><p className="muted">Short notices for your sections. Save a draft, then publish when ready.</p></div>
-      <button className="primary" disabled={closed} onClick={()=>{setMessage('');setEditing('new')}}>New announcement</button></div>
+    <button type="button" className="composer-card" disabled={closed} onClick={()=>{setMessage('');setEditing('new')}}><span className="post-icon announcement" aria-hidden="true">✉</span>Announce something to your class</button>
     {message&&<p role="alert">{message}</p>}
     {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
-      rows.length===0?<section className="panel"><h2>No announcements yet</h2></section>:
-      <div className="cards">{rows.map(a=><article className="panel" key={a.id}>
-        <p className="eyebrow">{a.state} · {names(a.section_ids)}</p><h3>{a.title}</h3><p className="pre">{a.body}</p>
-        <div className="actions">
+      rows.length===0?null:
+      <>{rows.map(a=><article className="panel post" key={a.id}>
+        <span className="post-icon announcement" aria-hidden="true">✉</span>
+        <div className="post-head"><h3>{a.title}</h3><span className="muted">{a.state==='draft'?'Draft':'Published'} · {names(a.section_ids)}</span></div><p className="post-body pre">{a.body}</p>
+        <div className="actions post-body">
           {a.state==='draft'&&<><button disabled={closed} onClick={()=>setEditing(a)}>Edit</button><button className="primary" disabled={closed} onClick={()=>act(a,'publish')}>Publish</button></>}
-          {a.state==='published'&&<button disabled={closed} onClick={()=>act(a,'archive')}>Archive</button>}</div></article>)}</div>}
+          {a.state==='published'&&<button disabled={closed} onClick={()=>act(a,'archive')}>Archive</button>}</div></article>)}</>}
     {query.hasNextPage&&<button disabled={query.isFetchingNextPage} onClick={()=>query.fetchNextPage()}>{query.isFetchingNextPage?'Loading…':'Load more announcements'}</button>}
     {editing&&<Editor offering={offering} existing={editing==='new'?null:editing} onClose={()=>setEditing(null)} onDone={()=>{setEditing(null);refresh()}}/>}
   </>;

@@ -4,8 +4,8 @@ import {useLocation} from 'react-router-dom';
 export interface Origin{from:string;label:string}
 
 const PLACES:[RegExp,string][]=[
-  [/^\/(student|faculty|admin)$/,'Dashboard'],
-  [/^\/(student|faculty)\/subjects$/,'My subjects'],
+  [/^\/(student|faculty|admin)$/,'Home'],
+  [/^\/(student|faculty)\/subjects$/,'All subjects'],
   [/^\/admin\/terms\/[^/]+$/,'Term workspace'],
   [/^\/admin\/academics$/,'School years'],
   [/^\/admin\/accounts$/,'User accounts'],
@@ -16,7 +16,7 @@ const PLACES:[RegExp,string][]=[
   [/\/gradebook$/,'Gradebook'],
   [/\/progress$/,'Progress'],
   [/\/class-standing$/,'Class standing'],
-  [/^\/faculty\/offerings\/[^/]+$/,'Students'],
+  [/^\/faculty\/offerings\/[^/]+\/people$/,'People'],
   [/\/syllabus$/,'Syllabus'],
 ];
 const place=(path:string)=>PLACES.find(([re])=>re.test(path.split('?')[0]))?.[1]??'previous page';

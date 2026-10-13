@@ -14,18 +14,18 @@ try{
   // ---- student: dashboard -> lesson/work -> Back returns to the dashboard; direct link falls back to the list
   const studentState=await sessionFor(browser,'student1@example.com');   // one sign-in per account: the limiter allows 5 a minute
   const stu=await newPage(browser,{state:studentState});
-  await stu.goto('/student');await stu.getByRole('heading',{name:/keep learning/}).waitFor();await stu.waitForLoadState('networkidle');
+  await stu.goto('/student');await stu.getByRole('heading',{name:'Home'}).waitFor();await stu.waitForLoadState('networkidle');
   const todo=stu.locator('.dash-side .rows a').first();
   if(await todo.count()){
     await todo.click();await stu.waitForURL(/\/work\//);
-    check('a to-do opened from the dashboard says it goes back to the Dashboard',await says(stu,/Back to Dashboard/));
+    check('a to-do opened from the dashboard says it goes back to the Dashboard',await says(stu,/Back to Home/));
     await backLink(stu).click();await stu.waitForURL(u=>new URL(u).pathname==='/student');
     check('and Back returns to the dashboard',path(stu)==='/student');
   }
   await stu.goto('/student');await stu.waitForLoadState('networkidle');
   const next=stu.getByRole('link',{name:/Continue learning|Open work/});
   if(await next.count()){await next.click();await stu.waitForURL(/\/student\/offerings\//);
-    check('the next-step button opens its page and Back names the Dashboard',await says(stu,/Back to Dashboard/))}else console.log('SKIP next-step check: this dev student has nothing left to do (covered by the fresh-install flow)');
+    check('the next-step button opens its page and Back names Home',await says(stu,/Back to Home/))}else console.log('SKIP next-step check: this dev student has nothing left to do (covered by the fresh-install flow)');
   const lessonUrl=await stu.evaluate(async o=>{const items=await (await fetch(`/api/learn/offerings/${o}/items`)).json();return `/student/offerings/${o}/lessons/${items.find(i=>i.kind==='lesson').id}`},O);
   await stu.goto(lessonUrl);
   check('the same lesson opened directly falls back to Classwork',await says(stu,/Back to Classwork/));
@@ -33,18 +33,18 @@ try{
   check('and that Back lands on Classwork',/\/classwork/.test(path(stu)));
   // subject card -> Progress tab is a tab, but a card's lesson link carries the origin too
   await stu.goto('/student/subjects');await stu.waitForLoadState('networkidle');
-  await stu.getByRole('link',{name:/Grades & results/}).first().click();await stu.waitForURL(/\/results$/);
+  await stu.locator('.class-foot').getByRole('link',{name:'Grades'}).first().click();await stu.waitForURL(/\/results$/);
   await stu.getByRole('heading',{name:'Published grades'}).waitFor();await stu.getByRole('heading',{name:'Released assessment results'}).waitFor();
   check('the subject card links to "Grades & results" and the page uses both headings',true);
   check('the subject tab is called "Grades"',await stu.getByRole('navigation',{name:'Subject sections'}).getByRole('link',{name:'Grades',exact:true}).count()===1);
 
   // ---- faculty: dashboard task -> scores page -> Back to the dashboard; direct link -> Assessments
   const fac=await newPage(browser,{state:await sessionFor(browser,'faculty1@example.com')});
-  await fac.goto('/faculty');await fac.getByRole('heading',{name:/Good (morning|afternoon|evening)/}).waitFor();await fac.waitForLoadState('networkidle');
+  await fac.goto('/faculty');await fac.getByRole('heading',{name:'Home'}).waitFor();await fac.waitForLoadState('networkidle');
   const task=fac.getByRole('link',{name:'Review submissions'});
   if(await task.count()){
     await task.click();await fac.waitForURL(/\/scores$/);
-    check('grading opened from the faculty dashboard says Back to Dashboard',await says(fac,/Back to Dashboard/));
+    check('grading opened from the faculty dashboard says Back to Dashboard',await says(fac,/Back to Home/));
     await backLink(fac).click();await fac.waitForURL(u=>new URL(u).pathname==='/faculty');
     check('and Back returns to the faculty dashboard',path(fac)==='/faculty');
     await fac.goBack();await fac.waitForURL(/\/scores$/);
@@ -67,7 +67,7 @@ try{
 
   // ---- phone width and keyboard: the same Back link is reachable and works
   const mob=await newPage(browser,{width:375,height:812,state:studentState});
-  await mob.goto('/student');await mob.getByRole('heading',{name:/keep learning/}).waitFor();await mob.waitForLoadState('networkidle');
+  await mob.goto('/student');await mob.getByRole('heading',{name:'Home'}).waitFor();await mob.waitForLoadState('networkidle');
   await mob.locator('a[href*="/work/"]').first().click();await mob.waitForURL(/\/student\/offerings\//);
   const link=backLink(mob);const box=await link.boundingBox();
   check('on a phone the Back link is at least 44px tall',box.height>=44,`${Math.round(box.height)}px`);

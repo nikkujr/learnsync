@@ -142,7 +142,7 @@ try{
   await stud.goto('/student');
   await stud.getByRole('link',{name:'Continue learning'}).click();
   await stud.getByText('real customer problem').waitFor();
-  check('the dashboard next step opens the published lesson, and Back names the Dashboard',await stud.locator('p.back a',{hasText:/Back to Dashboard/}).count()===1);
+  check('the dashboard next step opens the published lesson, and Back names Home',await stud.locator('p.back a',{hasText:/Back to Home/}).count()===1);
   await stud.goto(`/student/offerings/${O}/syllabus`);
   await stud.getByRole('link',{name:/Starting a venture/}).click();
   await stud.getByText('real customer problem').waitFor();
