@@ -45,7 +45,18 @@ export function FacultyClasswork(){
     document.addEventListener('click',outside);document.addEventListener('keydown',escape);
     return()=>{document.removeEventListener('click',outside);document.removeEventListener('keydown',escape)};
   },[]);
-  const choose=(c:Create|'stream')=>{if(menu.current)menu.current.open=false;if(c==='stream')navigate(`${base}/stream`);else setCreate(c)};
+  // Quizzes, activities and exams open their create page at once, like Classroom, as a draft the teacher names there
+  const choose=async(c:Create|'stream')=>{
+    if(menu.current)menu.current.open=false;
+    if(c==='stream')navigate(`${base}/stream`);
+    else if(c?.type==='assessment'){
+      try{const a=await send<Assessment>('POST',`/teach/offerings/${offering.id}/assessments`,{kind:c.kind,title:`Untitled ${KIND_LABEL[c.kind].toLowerCase()}`,section_ids:[]});created(`${base}/assessments/${a.id}/edit`)}
+      catch(e){setMoved(errorText(e))}}
+    else if(c?.type==='item'){
+      try{const i=await send<Item>('POST',`/teach/offerings/${offering.id}/items`,{kind:c.kind,title:`Untitled ${KIND[c.kind].toLowerCase()}`,section_ids:[],anchor_node_id:null});created(`${base}/content/${i.id}/edit`)}
+      catch(e){setMoved(errorText(e))}}
+    else setCreate(c);
+  };
 
   const rows:Row[]=[
     ...(items.data??[]).map(i=>({canUnpublish:false,pending:!!i.draft,cat:'lesson' as Cat,key:'i'+i.id,type:'item' as const,id:i.id,title:itemTitle(i),label:KIND[i.kind],anchor:(i.published??i.draft)?.anchor_node_id??null,archived:i.archived,

@@ -117,34 +117,47 @@ function ItemEditor({offering,item,refetch}:{offering:OfferingSummary;item:Item;
     catch(err){setMessage(errorText(err))}
   }
 
-  return <>
-    <p className="back"><Link to={back}>← Content</Link></p>
-    <div className="page-heading"><div><p className="eyebrow">{({lesson:'Lesson',file:'File',reference:'Link'})[item.kind]}</p><h2>{v.title||'Untitled'}</h2>
-      <p className="muted">{item.published?`Students see version ${item.published.version} until you publish this draft.`:'Not visible to students until you publish.'}</p></div>
-      <SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/></div>
+  const leave=async()=>{if(await auto.flush())navigate(back);else setMessage('Resolve the save problem above first.')};
+  const closeMenu=(e:React.MouseEvent<HTMLElement>)=>{(e.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open')};
+  return <div className="compose">
+    <header className="compose-bar">
+      <button type="button" className="icon-btn" aria-label="Close and go back to Classwork" onClick={leave}><span aria-hidden="true">×</span></button>
+      <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} aria-hidden="true">▤</span>
+      <h1>{({lesson:'Lesson',file:'File',reference:'Link'})[item.kind]}</h1>
+      <span className="compose-actions"><SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/>
+        <details className="dropdown manage"><summary className="button icon-btn" aria-label="More actions"><span aria-hidden="true">⋮</span></summary>
+          <div className="menu-list" role="group" aria-label="More actions">
+            <button type="button" onClick={e=>{closeMenu(e);void setSettings({archived:!item.archived})}}>{item.archived?'Restore':'Archive'}</button>
+            <hr/><button type="button" onClick={e=>{closeMenu(e);void discard()}}>{item.published?'Discard draft':'Delete'}</button>
+            <p className="muted menu-note">Archived items are hidden from students and kept in your records.</p></div></details>
+        <button className="primary" onClick={publish}>Publish</button></span>
+    </header>
+    <p className="muted">{item.published?`Students see version ${item.published.version} until you publish this draft.`:'Not visible to students until you publish. Your changes are saved as a draft as you go.'}</p>
     {auto.recovered&&<div className="warn" role="alert"><p>Unsaved changes from this browser were found ({new Date(auto.recovered.at).toLocaleString()}).</p>
       <div className="actions"><button className="primary" onClick={auto.restoreRecovered}>Restore my changes</button><button onClick={auto.discardRecovered}>Discard them</button></div></div>}
     {auto.status==='conflict'&&<div className="warn" role="alert"><p><strong>This draft was changed somewhere else.</strong> Nothing has been overwritten. Your version:</p>
       {item.kind==='lesson'&&<details><summary>Show my unsaved text</summary><div className="rich-content" dangerouslySetInnerHTML={{__html:v.body_html}}/></details>}
       <div className="actions"><button onClick={async()=>{try{const d=await serverDraft();auto.useServer({title:d.title,body_html:d.body_html??'',reference_url:d.reference_url??'',reference_note:d.reference_note,anchor_node_id:d.anchor_node_id},d.counter)}catch(e){setMessage(errorText(e))}}}>Load the newer version (drops my edits)</button>
         <button className="primary" onClick={async()=>{try{auto.overwrite((await serverDraft()).counter)}catch(e){setMessage(errorText(e))}}}>Keep my version (overwrites the newer one)</button></div></div>}
-    <section className="panel">
-      <label>Title<input value={v.title} maxLength={200} onChange={e=>set({title:e.target.value})}/></label>
-      <label>Attached syllabus topic<select value={v.anchor_node_id??''} onChange={e=>set({anchor_node_id:e.target.value||null})}><option value="">Not attached</option>{nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>
-      {item.kind==='lesson'&&<><p id="lesson-label" className="label">Lesson content</p><RichEditor html={v.body_html} onChange={html=>set({body_html:html})}/></>}
-      {item.kind==='file'&&<><p>{file?<>Current file: <strong>{file.name}</strong> ({Math.ceil(file.size/1024)} KB)</>:'No file uploaded yet.'}</p>
-        <form onSubmit={uploadFile}><label>{file?'Replace the file':'Upload a file'} (PDF, Word, PowerPoint, Excel, PNG or JPEG, up to 20 MB)<input name="file" type="file" required accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg"/></label><button>Upload</button></form>
-        <label>Description (optional)<textarea value={v.reference_note} maxLength={5000} onChange={e=>set({reference_note:e.target.value})}/></label></>}
-      {item.kind==='reference'&&<><label>Link address<input type="url" value={v.reference_url} maxLength={2000} placeholder="https://" onChange={e=>set({reference_url:e.target.value})}/></label>
-        <label>Note for students (optional)<textarea value={v.reference_note} maxLength={5000} onChange={e=>set({reference_note:e.target.value})}/></label></>}
-    </section>
-    {item.kind==='reference'&&<ReferenceText base={base} disabled={false} beforeFetch={()=>auto.flush()}/>}
-    {item.kind!=='reference'&&item.published&&<p className="muted">{item.published.index_state==='failed'?'Study help could not read this file (it may be corrupt or unsupported), so students cannot ask about it. Upload a fixed file and publish again.':!item.published.study_chunks?'This published version has no readable text (a scanned PDF or an image?), so study help cannot use it.':`Study help can search ${item.published.study_chunks} passage${item.published.study_chunks===1?'':'s'} of the published version.`}</p>}
-    <section className="panel"><h3>Audience and status</h3>
-      <SectionChoice offering={offering} chosen={sections} onChange={ids=>{setSections(ids);void setSettings({section_ids:ids})}}/>
-      <button type="button" onClick={()=>setSettings({archived:!item.archived})}>{item.archived?'Restore item':'Archive item'}</button>
-      <p className="muted">Archived items are hidden from students and kept in your records.</p></section>
     {message&&<p role="alert">{message}</p>}
-    <div className="actions"><button className="primary" onClick={publish}>Publish</button><button onClick={discard}>{item.published?'Discard draft':'Delete item'}</button></div>
-  </>;
+    <div className="compose-grid">
+      <div className="compose-main">
+      <section className="panel">
+        <label>Title<input value={v.title} maxLength={200} placeholder="Title" autoFocus={/^Untitled /.test(v.title)} onFocus={e=>{if(/^Untitled /.test(e.target.value))e.target.select()}} onChange={e=>set({title:e.target.value})}/></label>
+        {item.kind==='lesson'&&<><p id="lesson-label" className="label">Lesson content</p><RichEditor html={v.body_html} onChange={html=>set({body_html:html})}/></>}
+        {item.kind==='file'&&<><p>{file?<>Current file: <strong>{file.name}</strong> ({Math.ceil(file.size/1024)} KB)</>:'No file uploaded yet.'}</p>
+          <form onSubmit={uploadFile}><label>{file?'Replace the file':'Upload a file'} (PDF, Word, PowerPoint, Excel, PNG or JPEG, up to 20 MB)<input name="file" type="file" required accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg"/></label><button>Upload</button></form>
+          <label>Description (optional)<textarea value={v.reference_note} maxLength={5000} onChange={e=>set({reference_note:e.target.value})}/></label></>}
+        {item.kind==='reference'&&<><label>Link address<input type="url" value={v.reference_url} maxLength={2000} placeholder="https://" onChange={e=>set({reference_url:e.target.value})}/></label>
+          <label>Note for students (optional)<textarea value={v.reference_note} maxLength={5000} onChange={e=>set({reference_note:e.target.value})}/></label></>}
+      </section>
+      {item.kind==='reference'&&<ReferenceText base={base} disabled={false} beforeFetch={()=>auto.flush()}/>}
+      {item.kind!=='reference'&&item.published&&<p className="muted">{item.published.index_state==='failed'?'Study help could not read this file (it may be corrupt or unsupported), so students cannot ask about it. Upload a fixed file and publish again.':!item.published.study_chunks?'This published version has no readable text (a scanned PDF or an image?), so study help cannot use it.':`Study help can search ${item.published.study_chunks} passage${item.published.study_chunks===1?'':'s'} of the published version.`}</p>}
+      </div>
+      <aside className="compose-side panel" aria-label="Settings">
+        <SectionChoice offering={offering} chosen={sections} onChange={ids=>{setSections(ids);void setSettings({section_ids:ids})}}/>
+        <label>Topic<select value={v.anchor_node_id??''} onChange={e=>set({anchor_node_id:e.target.value||null})}><option value="">No topic</option>{nodes.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>
+      </aside>
+    </div>
+  </div>;
 }

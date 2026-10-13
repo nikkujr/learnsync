@@ -16,7 +16,7 @@ const PLACES:[RegExp,string][]=[
   [/\/gradebook$/,'Gradebook'],
   [/\/progress$/,'Progress'],
   [/\/class-standing$/,'Class standing'],
-  [/^\/faculty\/offerings\/[^/]+\/people$/,'People'],
+  [/^\/faculty\/offerings\/[^/]+\/people$/,'Students'],
   [/\/syllabus$/,'Syllabus'],
 ];
 const place=(path:string)=>PLACES.find(([re])=>re.test(path.split('?')[0]))?.[1]??'previous page';

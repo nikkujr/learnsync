@@ -32,7 +32,7 @@ try{
   // ---- teacher: old addresses
   const fac=[[`${fb}/content`,`${fb}/classwork`,'Classwork'],[`${fb}/assessments`,`${fb}/classwork?type=quiz`,'Classwork'],[`${fb}/announcements`,`${fb}/stream`,'Stream'],
     [`${fb}/grades`,`${fb}/gradebook`,'Grades'],[`${fb}/class-standing`,`${fb}/class-standing`,'Grades'],[`${fb}/attendance`,`${fb}/attendance`,'People'],
-    [`${fb}/progress`,`${fb}/progress`,'People'],[fb,fb,'People'],[`${fb}/syllabus`,`${fb}/syllabus`,'Classwork']];
+    [`${fb}/progress`,`${fb}/progress`,'People'],[fb,`${fb}/stream`,'Stream'],[`${fb}/people`,`${fb}/people`,'People'],[`${fb}/syllabus`,`${fb}/syllabus`,'Classwork']];
   for(const [from,to,tab] of fac){await teach.goto(from);await teach.waitForLoadState('networkidle');
     const label=await activeTab(teach).catch(()=>'(none)');
     check(`teacher ${from.replace(fb,'.')||'.'} lands on ${to.replace(fb,'.')||'.'} under the ${tab} tab`,where(teach)===to&&label===tab,`${where(teach).replace(fb,'.')} / ${label}`)}
@@ -40,7 +40,7 @@ try{
 
   // ---- teacher: pills, status filter, reorder
   await teach.goto(`${fb}/classwork?type=lesson`);await teach.getByRole('heading',{name:'Not under a topic'}).waitFor();
-  check('the teacher sees Lessons, Quizzes, Activities, Exams and Syllabus pills',(await teach.locator('nav[aria-label="Classwork type"] a').allInnerTexts()).map(t=>t.replace(/\d+|\s/g,'')).join(',')==='Lessons,Quizzes,Activities,Exams,Syllabus');
+  check('the teacher sees All, Lessons, Quizzes, Activities, Exams and Syllabus pills',(await teach.locator('nav[aria-label="Classwork type"] a').allInnerTexts()).map(t=>t.replace(/\d+|\s/g,'')).join(',')==='All,Lessons,Quizzes,Activities,Exams,Syllabus');
   await teach.getByRole('button',{name:'Reorder'}).first().click();
   await teach.getByRole('button',{name:`Move ${B} up`}).click();
   await teach.getByText(`Moved “${B}” up`,{exact:false}).waitFor();
@@ -48,8 +48,8 @@ try{
   check('Reorder moves a lesson up and the server keeps the order',order[0]===B&&order[1]===A,order.join(' > '));
   await teach.getByRole('button',{name:/^Drafts/}).click();
   check('the Drafts filter hides published lessons without a newer draft',await teach.locator('ul.seq li',{hasText:A}).count()===0);
-  await teach.goto(`${fb}/content/${first}/edit`);await teach.waitForSelector('nav[aria-label="Classwork type"]');
-  check('the lesson editor keeps the pills with Lessons selected',(await teach.locator('nav[aria-label="Classwork type"] a.active').innerText()).startsWith('Lessons'));
+  await teach.goto(`${fb}/content/${first}/edit`);await teach.waitForSelector('.compose-side');
+  check('the lesson editor is the create page (settings on the right) under the Classwork tab',await teach.locator('.compose-side').count()===1&&(await activeTab(teach))==='Classwork');
   await teach.goto('/faculty/review');await teach.getByRole('heading',{name:'To review'}).waitFor();await teach.waitForLoadState('networkidle');
   check('the To review page loads with a heading and either the queue or the empty message',await teach.getByText(/Nothing is waiting|waiting\./).count()>0);
   check('axe finds no violations on To review',(await axe(teach)).length===0);
@@ -62,7 +62,7 @@ try{
     const label=await activeTab(stu).catch(()=>'(none)');
     check(`student ${from.replace(sb,'.')} lands on ${to.replace(sb,'.')} under the ${tab} tab`,where(stu)===to&&label===tab,`${where(stu).replace(sb,'.')} / ${label}`)}
   check('a student has three subject tabs',await stu.locator('nav[aria-label="Subject sections"] a').count()===3);
-  await stu.goto(`${sb}/classwork?type=lesson`);await stu.getByRole('link',{name:B}).click();await stu.waitForSelector('nav[aria-label="Classwork type"]');
+  await stu.goto(`${sb}/classwork?type=lesson`);await stu.getByRole('link',{name:B,exact:true}).click();await stu.waitForSelector('nav[aria-label="Classwork type"]');
   check('opening a lesson keeps the pills with Lessons selected',(await stu.locator('nav[aria-label="Classwork type"] a.active').innerText()).startsWith('Lessons'));
   await stu.getByRole('link',{name:/Back to Classwork/}).click();await stu.waitForSelector('ul.seq');
   check('Back from the lesson returns to the Lessons pill',where(stu)===`${sb}/classwork?type=lesson`,where(stu));

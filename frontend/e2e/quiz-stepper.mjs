@@ -1,4 +1,4 @@
-// Quiz stepper, pasted questions, duplicate, and the short activity screen.
+// The Classroom-style create page (one screen, settings on the right), pasted questions, duplicate, and the activity screen.
 // SELF-PROVISIONING: creates its own term, subject and a published syllabus, so run it ONLY against a disposable
 // database that has the development accounts (`python -m app.cli seed-demo`). Refuses unless STEPPER_E2E_DISPOSABLE=1.
 import {launch,newPage,sessionFor,axe} from './lib.mjs';
@@ -46,31 +46,26 @@ try{
   const d=(await call(teach,'POST',`/teach/offerings/${O}/syllabus/draft`)).data;
   const sv=(await call(teach,'PUT',`/teach/offerings/${O}/syllabus/draft`,{expected_counter:d.counter,outline,grading_policy:policy})).data;
   await call(teach,'POST',`/teach/offerings/${O}/syllabus/draft/publish`,{expected_counter:sv.counter});
-  const planned=(await call(teach,'POST',`/teach/offerings/${O}/assessments/plan`,{plan_key:'stepper-plan-1',items:[
-    {kind:'online_quiz',title:'Quiz 1',category_key:'quiz',period:'midterm'},{kind:'activity',title:'Activity 1',category_key:'activity',period:'midterm'}]})).data.ids;
+  const plan=await call(teach,'POST',`/teach/offerings/${O}/assessments/plan`,{plan_key:'stepper-plan-1',items:[
+    {kind:'online_quiz',title:'Quiz 1',category_key:'quiz',period:'midterm'},{kind:'activity',title:'Activity 1',category_key:'activity',period:'midterm'}]});if(!plan.data?.ids)throw new Error('plan failed: '+JSON.stringify(plan));const planned=plan.data.ids;
   const [quizId,activityId]=planned;
 
   // ---- A: finish the planned quiz through the stepper
   const page=await newPage(browser,{state:F});
   await page.goto(`/faculty/offerings/${O}/assessments/${quizId}/edit`);await page.waitForLoadState('networkidle');
-  check('a quiz opens as a three-step stepper starting with Basics',await page.getByText('step 1 of 3').count()===1&&await page.getByRole('button',{name:/^Basics/}).count()===1);
-  check('the Basics step shows only the essentials (more options are folded)',await page.locator('details.more[open]').count()===0&&await page.getByLabel('Attempts allowed').isHidden());
+  check('a quiz opens as one page: the work on the left and the settings on the right, no stepper',await page.locator('.compose-side').count()===1&&await page.locator('ol.stepper').count()===0&&await page.getByText(/step \d of/).count()===0);
+  check('the rarely used options are folded',await page.locator('details.more[open]').count()===0&&await page.getByLabel('Attempts allowed').isHidden());
   await act(()=>page.getByLabel('Due').fill('2026-12-01T17:00'));
-  await act(()=>page.getByRole('button',{name:'Next',exact:true}).click());
-  await page.getByText('step 2 of 3').waitFor();
   await act(()=>page.locator('details.panel summary',{hasText:'Paste many questions'}).click());
   await act(()=>page.getByLabel('Questions',{exact:true}).fill(PASTE));
   await act(()=>page.getByRole('button',{name:'Preview',exact:true}).click());
   await page.getByText('3 questions ready').waitFor();
   check('the preview reports the problem block by line',(await page.locator('main').innerText()).includes('Line 15:'),(await page.locator('main').innerText()).match(/Line \d+: [^\n]*/)?.[0]);
-  check('axe finds no violations on the Questions step',(await axe(page)).length===0);
   await act(()=>page.getByRole('button',{name:'Add 3 questions'}).click());
   await page.getByRole('heading',{name:/^Question 3/}).waitFor();
-  await act(()=>page.getByRole('button',{name:'Next',exact:true}).click());
-  await page.getByText('step 3 of 3').waitFor();
-  check('the review step summarises the quiz',(await page.locator('main').innerText()).includes('3 questions · 4 points'));
-  check('the final button says Assign',await page.getByRole('button',{name:'Assign',exact:true}).count()===1);
-  check('axe finds no violations on the Review step',(await axe(page)).length===0);
+  check('the settings show the total points taken from the questions',(await page.locator('.compose-side').innerText()).includes('4 (from the questions)'));
+  check('the button says Assign',await page.getByRole('button',{name:'Assign',exact:true}).count()===1);
+  check('axe finds no violations on the create page',(await axe(page)).length===0);
   await act(()=>page.getByRole('button',{name:'Assign',exact:true}).click());
   await page.waitForURL(/\/classwork(\?type=\w+)?$/);
   check(`a planned quiz was finished and assigned in ${inputs} inputs`,inputs<=10,String(inputs));
@@ -82,28 +77,33 @@ try{
 
   // ---- B: Save and exit keeps the work, and editing a published quiz says Update for students
   await page.goto(`/faculty/offerings/${O}/assessments/${quizId}/edit`);await page.waitForLoadState('networkidle');
-  check('a published quiz reopens at step 1 and offers the update only on the last step',await page.getByRole('button',{name:'Update for students'}).count()===0&&await page.getByText('step 1 of 3').count()===1);
-  await act(()=>page.getByRole('button',{name:/^Review & assign/}).click());
-  check('the final button of a published quiz reads Update for students',await page.getByRole('button',{name:'Update for students'}).count()===1);
+  check('the button of a published quiz reads Update for students',await page.getByRole('button',{name:'Update for students'}).count()===1);
+  await act(()=>page.getByRole('button',{name:'Close and go back to Classwork'}).click());
+  await page.waitForURL(/\/classwork(\?type=\w+)?$/);
+  check('the close button saves and goes back to Classwork',true);
+  await page.goto(`/faculty/offerings/${O}/assessments/${quizId}/edit`);await page.waitForLoadState('networkidle');
 
   // ---- C: duplicate
+  await act(()=>page.locator('summary[aria-label="More actions"]').click());
   await act(()=>page.getByRole('button',{name:/^Duplicate this/}).click());
   await page.waitForURL(/\/edit$/);await page.waitForLoadState('networkidle');
-  check('a duplicate opens as a hidden draft with the questions',(await page.getByLabel('Title').inputValue())==='Copy of Quiz 1');
+  await page.waitForFunction(()=>[...document.querySelectorAll('input')].some(i=>i.value==='Copy of Quiz 1'),null,{timeout:10000}).catch(()=>{});      // the URL is /edit before and after, so wait for the copy itself
+  const dupTitle=await page.getByLabel('Title',{exact:true}).inputValue();
+  check('a duplicate opens as a hidden draft with the questions',dupTitle==='Copy of Quiz 1',dupTitle);
   const list=(await call(page,'GET',`/teach/offerings/${O}/assessments`)).data;
   const copy=list.find(a=>a.draft?.title==='Copy of Quiz 1');
   check('the copy has no dates and is not published',!!copy&&copy.published===null&&copy.draft.deadline===null&&copy.draft.questions.length===3);
   check('students do not see the copy',!(await call(student,'GET','/dashboard/student/todo')).data.todo.some(w=>w.title==='Copy of Quiz 1'));
 
   // ---- C2: removing a question is undoable, and deleting asks with the safe choice first
-  await page.getByRole('button',{name:/^Questions/}).click();await page.getByRole('heading',{name:/^Question 3/}).waitFor();
+  await page.getByRole('heading',{name:/^Question 3/}).waitFor();
   await page.getByRole('button',{name:'Remove'}).first().click();
   await page.getByText('Question 1 removed.').waitFor();
   check('removing a question asks nothing and offers Undo',await page.getByRole('heading',{name:/^Question 3/}).count()===0&&await page.getByRole('button',{name:'Undo'}).count()===1);
   await page.getByRole('button',{name:'Undo'}).click();
   await page.getByRole('heading',{name:/^Question 3/}).waitFor();
   check('Undo puts the question back',await page.getByRole('heading',{name:/^Question 3/}).count()===1);
-  await page.getByRole('button',{name:'Delete assessment'}).click();
+  await page.locator('summary[aria-label="More actions"]').click();await page.getByRole('button',{name:'Delete',exact:true}).click();
   await page.locator('dialog[data-confirm]').waitFor();
   check('deleting asks first, and the focused default is Cancel',await page.evaluate(()=>document.activeElement?.hasAttribute('data-confirm-no')));
   await page.locator('[data-confirm-no]').click();
@@ -113,7 +113,7 @@ try{
   const act2=await newPage(browser,{state:F});
   await act2.goto(`/faculty/offerings/${O}/assessments/${activityId}/edit`);await act2.waitForLoadState('networkidle');
   check('an activity has no stepper',await act2.getByText(/step \d of/).count()===0&&await act2.locator('ol.stepper').count()===0);
-  await act2.getByLabel('Maximum points').fill('20');await act2.getByLabel('Due').fill('2026-12-05T17:00');
+  await act2.getByLabel('Points',{exact:true}).fill('20');await act2.getByLabel('Due').fill('2026-12-05T17:00');
   await act2.getByLabel('Instructions for students').fill('Submit a one-page PDF.');
   check('axe finds no violations on the activity screen',(await axe(act2)).length===0);
   await act2.getByRole('button',{name:'Assign',exact:true}).click();await act2.waitForURL(/\/classwork(\?type=\w+)?$/);

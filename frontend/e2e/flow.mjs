@@ -102,9 +102,8 @@ try{
 
   await teach.goto(`/faculty/offerings/${O}/classwork`);
   await teach.getByText('+ Create').click();await teach.getByRole('button',{name:'Lesson',exact:true}).click();
-  await teach.locator('dialog').getByLabel('Title').fill('Starting a venture');
-  await teach.locator('dialog').getByLabel('Attach to a syllabus topic').selectOption({label:'Chapter 1 - Foundations › What is a venture?'});
-  await teach.locator('dialog').getByRole('button',{name:'Create and edit'}).click();
+  await teach.getByLabel('Title',{exact:true}).fill('Starting a venture');            // Create opens the lesson page at once
+  await teach.getByLabel('Topic').selectOption({label:'Chapter 1 - Foundations › What is a venture?'});
   await teach.locator('.rich-content').click();
   await teach.keyboard.type('A venture starts when someone finds a real customer problem and builds a solution for it.');
   await teach.waitForTimeout(2500);
@@ -116,11 +115,9 @@ try{
 
   await teach.goto(`/faculty/offerings/${O}/classwork?type=quiz`);
   await teach.getByText('+ Create').click();await teach.getByRole('button',{name:'Quiz',exact:true}).click();
-  await teach.locator('dialog').getByLabel('Title').fill('Venture basics quiz');
-  await teach.locator('dialog').getByRole('button',{name:'Create and set up'}).click();
+  await teach.getByLabel('Title',{exact:true}).fill('Venture basics quiz');          // Create opens the compose page at once (one screen, settings on the right)
   await teach.getByLabel('Grading category').selectOption({label:'Quizzes (100%)'});
   await teach.getByLabel('Grading period').selectOption({label:'Midterm'});
-  await teach.getByRole('button',{name:'Next',exact:true}).click();                 // the quiz is a three-step stepper
   await teach.getByRole('button',{name:'Add multiple choice'}).click();
   await teach.getByLabel('Question',{exact:true}).fill('What starts a venture?');
   await teach.getByLabel('Choice 1 text').fill('A real customer problem');
@@ -130,7 +127,6 @@ try{
   await teach.getByLabel('Choice 1 is correct').check();
   await teach.waitForTimeout(2500);
   await shot(teach,'flow-2-quiz-editor');
-  await teach.getByRole('button',{name:'Next',exact:true}).click();
   await teach.getByRole('button',{name:'Assign',exact:true}).click();
   await teach.waitForURL(/\/classwork\?type=quiz$/);
   await teach.getByText('Published v1').first().waitFor();
@@ -273,7 +269,7 @@ try{
   await stud.setViewportSize({width:1280,height:900});await teach.setViewportSize({width:1280,height:900});
 
   // ---------- 7d. the teacher's per-student standing page ----------
-  await teach.goto(`/faculty/offerings/${O}`);
+  await teach.goto(`/faculty/offerings/${O}/people`);
   await teach.locator('table a').first().click();
   await teach.getByRole('heading',{name:'Grades',exact:true}).waitFor();
   check('the cards other than Grades start collapsed',await teach.locator('details.fold.panel[open]').count()===0);

@@ -1,5 +1,5 @@
 import {useEffect,useRef} from 'react';
-import {Link} from 'react-router-dom';
+import {Link,useSearchParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
 import {useHere} from '../../components/origin';
@@ -177,23 +177,39 @@ export function AdminHome(){
   }}</Page>;
 }
 
+const TODO_TABS=[['assigned','Assigned'],['missing','Missing'],['done','Done']] as const;
+const WEEK=7*864e5;
+/** The end of this week (Sunday night, local time). */
+function endOfWeek(now:number){const d=new Date(now);d.setHours(23,59,59,999);return d.getTime()+((7-d.getDay())%7)*864e5}
+
+/** Classroom's To-do: Assigned (by when it is due), Missing (late work still accepted) and Done (submitted). */
 export function StudentTodo(){
   const here=useHere();
+  const [params]=useSearchParams();
+  const tab=TODO_TABS.find(t=>t[0]===params.get('tab'))?.[0]??'assigned';
   const query=useQuery({queryKey:['todo','student'],queryFn:()=>api<{todo:Work[];awaiting_feedback:Work[];another_attempt:Work[]}>('/dashboard/student/todo')});
   const row=(w:Work,note:string)=><li key={w.assessment_id} data-cat={w.kind==='online_quiz'?'quiz':'activity'}><span className="grow"><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {w.kind==='online_quiz'?'Quiz':'Activity'} · {note}</span></span></li>;
-  const group=(title:string,hint:string,items:Work[],note:(w:Work)=>string)=><section className="tree d0" key={title}><header><h2>{title}</h2><span className="count">{items.length}</span></header><p className="muted">{hint}</p>
-    {items.length===0?<p className="muted">Nothing here.</p>:<ul className="seq compact">{items.map(w=>row(w,note(w)))}</ul>}</section>;
+  const group=(title:string,hint:string,items:Work[],note:(w:Work)=>string)=><section className="tree d0" key={title}><header><h2>{title}</h2><span className="count">{items.length}</span></header>{hint&&<p className="muted">{hint}</p>}
+    <ul className="seq compact">{items.map(w=>row(w,note(w)))}</ul></section>;
   return <>
-    <div className="page-heading"><div><p className="eyebrow">All subjects</p><h1>To do</h1><p className="muted">Quizzes and activities from every current subject, earliest deadline first.</p></div></div>
+    <div className="page-heading"><div><h1>To-do</h1><p className="muted">Quizzes and activities from every current subject.</p></div></div>
     <Page query={query}>{d=>{
-      const open=d.todo.filter(w=>w.state!=='not_open'),later=d.todo.filter(w=>w.state==='not_open');
-      const due=(w:Work)=>w.deadline?(w.late_allowed?`late submission allowed, was due ${dateTime(w.deadline)}`:`due ${dateTime(w.deadline)}`):'no deadline';
+      const now=Date.now();const past=(w:Work)=>!!w.deadline&&Date.parse(w.deadline)<now;
+      const missing=d.todo.filter(past),assigned=d.todo.filter(w=>!past(w)),done=[...d.another_attempt,...d.awaiting_feedback];
+      const counts={assigned:assigned.length,missing:missing.length,done:done.length};
+      const thisWeek=endOfWeek(now);
+      const bucket=(w:Work)=>!w.deadline?'No due date':Date.parse(w.deadline)<=thisWeek?'This week':Date.parse(w.deadline)<=thisWeek+WEEK?'Next week':'Later';
+      const due=(w:Work)=>w.state==='not_open'&&w.available_from?`opens ${dateTime(w.available_from)}`:w.deadline?`due ${dateTime(w.deadline)}`:'no deadline';
+      const pastNote=(w:Work)=>`was due ${dateTime(w.deadline!)}${w.late_allowed?' · late submission allowed':''}`;
+      const doneNote=(w:Work)=>d.another_attempt.includes(w)?`${plural(w.attempts_left??0,'attempt')} left, you can try again`:'submitted, awaiting feedback';
+      const everything=counts.assigned+counts.missing+counts.done===0;
       return <>
-        {d.todo.length+d.awaiting_feedback.length+d.another_attempt.length===0&&<section className="panel"><h2>You’re up to date</h2><p className="muted">Nothing needs your action. New work appears here when your teacher publishes it.</p><Link state={here} className="button" to="/student/subjects">See my subjects</Link></section>}
-        {open.length>0&&group('Available now','Open for you, earliest deadline first.',open,due)}
-        {d.another_attempt.length>0&&group('Another attempt available','You have submitted these once and can try again.',d.another_attempt,w=>`${plural(w.attempts_left??0,'attempt')} left${w.late_allowed&&w.deadline?` · late submission allowed, was due ${dateTime(w.deadline)}`:''}`)}
-        {later.length>0&&group('Not open yet','These open later.',later,w=>w.available_from?`opens ${dateTime(w.available_from)}`:due(w))}
-        {d.awaiting_feedback.length>0&&group('Awaiting feedback','Submitted. Your teacher has not released a result yet.',d.awaiting_feedback,()=>'submitted')}
+        <nav className="tabs" aria-label="To-do sections">{TODO_TABS.map(([k,l])=><Link key={k} to={`?tab=${k}`} replace className={tab===k?'active':undefined} aria-current={tab===k?'page':undefined}>{l}{counts[k]>0&&<span className="tab-count">{counts[k]}</span>}</Link>)}</nav>
+        {everything&&<section className="panel"><h2>You’re up to date</h2><p className="muted">Nothing needs your action. New work appears here when your teacher publishes it.</p><Link state={here} className="button" to="/student/subjects">See my subjects</Link></section>}
+        {!everything&&tab==='assigned'&&(assigned.length===0?<p className="muted">Nothing is assigned right now.</p>
+          :(['No due date','This week','Next week','Later'] as const).map(b=>{const items=assigned.filter(w=>bucket(w)===b);return items.length>0&&group(b,'',items,due)}))}
+        {!everything&&tab==='missing'&&(missing.length===0?<p className="muted">Nothing is missing. Overdue work shows here only while your teacher still accepts it late.</p>:group('Past due','Your teacher still accepts these late.',missing,pastNote))}
+        {!everything&&tab==='done'&&(done.length===0?<p className="muted">Nothing is done yet.</p>:group('Done','Submitted work, and quizzes you can try again.',done,doneNote))}
       </>}}</Page>
   </>;
 }

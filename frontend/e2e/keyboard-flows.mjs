@@ -71,13 +71,9 @@ try{
   await tp.goto(`/faculty/offerings/${O}/classwork`);await tp.locator('summary',{hasText:'+ Create'}).waitFor();
   await tabTo(tp,d=>d.tag==='summary'&&/Create/.test(d.name),'+ Create');await press(tp,'Enter');
   await tabTo(tp,named(/^Lesson$/,'button'),'Lesson');await press(tp,'Enter');
-  await tp.locator('dialog[open]').waitFor();
-  check('opening the dialog with Enter puts focus inside it',(await describe(tp)).inDialog);
-  await tabTo(tp,named(/Create and edit/,'button'),'Create and edit');await press(tp,'Enter');
-  const stillOpen=await tp.locator('dialog[open]').count()===1;const invalid=await tp.locator('dialog input[name=title]:invalid').count()===1;
-  check('submitting the empty form by keyboard is refused and the dialog stays open on the missing title',stillOpen&&invalid);
-  await tabTo(tp,d=>d.inDialog&&d.tag==='input'&&/Title/.test(d.name),'the Title field',{back:true});await tp.keyboard.type('Keyboard walkthrough lesson');
-  await tabTo(tp,named(/Create and edit/,'button'),'Create and edit');await press(tp,'Enter');
+  await tp.getByText('Lesson content').waitFor();
+  check('Enter on Create > Lesson opens the lesson page with the title ready to type',await tp.evaluate(()=>document.activeElement?.tagName==='INPUT'&&/^Untitled/.test(document.activeElement.value)));
+  await tp.keyboard.type('Keyboard walkthrough lesson');
   await tp.getByText('Lesson content').waitFor();
   await tabTo(tp,d=>d.editable,'the lesson editor');await tp.keyboard.type('Typed with the keyboard only.');await tp.waitForTimeout(2500);
   check('the editor autosaves what was typed',(await tp.locator('.save-indicator').innerText()).includes('Saved'));

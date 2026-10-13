@@ -56,7 +56,7 @@ for(const scheme of ['light','dark'])for(const width of [1280,375]){
   // 2b. the creation dialogs behind the Classwork "+ Create" menu (its entries are only clickable once the menu is open)
   {const page=await newPage(browser,{...opts,state:sessions.faculty});
     await page.goto(`/faculty/offerings/${O}/classwork`);await page.waitForLoadState('networkidle');await page.waitForTimeout(300);
-    for(const name of ['Lesson','File','Link','Quiz','Paper quiz','Activity','Examination','Teacher-scored item','Quiz drafted by AI']){
+    for(const name of ['Quiz drafted by AI']){      // the other entries open their create page at once (and would leave an untitled draft behind)
       await page.locator('summary',{hasText:'+ Create'}).click();
       await page.locator('.menu-list button',{hasText:new RegExp(`^${name}$`)}).click();
       const opened=await page.locator('dialog[open]').waitFor({timeout:2000}).then(()=>true).catch(()=>false);

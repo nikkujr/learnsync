@@ -156,3 +156,43 @@ p.person{margin:0 0 8px;padding:8px 0}
 .assignment h3{margin:0 0 8px}
 @media(min-width:900px){.assignment{grid-template-columns:minmax(0,1fr) 320px}.assignment>aside{position:sticky;top:80px}}
 .tree.d0>header h2{margin:0;font-size:1.5rem;font-weight:400;color:var(--action)}
+/* grading: students | work | grade card */
+.grading{display:grid;gap:16px;align-items:start;margin-top:12px}
+@media(min-width:900px){.grading{grid-template-columns:260px minmax(0,1fr)}}
+.grade-list{display:grid;gap:4px;align-content:start}
+.grade-list .plain{gap:0;max-height:70vh;overflow:auto}
+.grade-student{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 8px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:none;text-align:left}
+.grade-student:hover{background:var(--surface-alt)}
+.grade-student.on{background:var(--accent-soft)}
+.grade-student .who{display:grid;min-width:0;line-height:1.25}
+.grade-student .who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.grade-student .who .muted{font-size:.8rem}
+.grade-student.on .who .muted{color:var(--accent-ink)}
+.grade-work{display:grid;gap:16px;align-items:start;min-width:0}
+.grade-card{display:grid;gap:6px;padding:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.grade-card h4{margin:0}
+.grade-card label{margin:8px 0 0}
+.grade-card p{margin:0}
+.grade-sub{min-width:0}
+@media(min-width:1200px){.grade-work.has-sub{grid-template-columns:minmax(0,1fr) 300px}.grade-work.has-sub .grade-card{order:2}}
+/* create page: bar on top, the work on the left, settings on the right */
+.compose{max-width:1100px;margin:0 auto}
+.compose-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:var(--header-h,64px);z-index:2;background:var(--canvas);padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px}
+.compose-bar h1{margin:0;font-size:1.4rem;font-weight:500}
+.compose-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.compose-icon{width:36px;height:36px}
+.icon-btn{display:inline-grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;font-size:1.5rem;line-height:1}
+button.icon-btn{border:0;background:none}
+button.icon-btn:hover{background:var(--surface-alt)}
+.manage>summary.icon-btn{border:0;background:none}
+.compose-grid{display:grid;gap:16px;align-items:start}
+@media(min-width:900px){.compose-grid{grid-template-columns:minmax(0,1fr) 300px}.compose-side{position:sticky;top:calc(var(--header-h,64px) + 72px)}}
+.compose-main{display:grid;gap:16px;min-width:0}
+.compose-main>.panel,.compose-side{margin:0}
+.compose-side label,.compose-side fieldset{margin:12px 0}
+.compose-side fieldset{border:0;padding:0}
+.menu-note{max-width:260px;padding:8px 12px;margin:0;font-size:.8rem}
+.compose-side legend{padding:0;font-weight:700}
+.split{display:inline-flex}
+.split>button{border-radius:999px 0 0 999px}
+.split-more{display:inline-flex;align-items:center;min-width:44px;justify-content:center;padding:9px 12px;border-radius:0 999px 999px 0;border-left:1px solid rgba(255,255,255,.45)}
