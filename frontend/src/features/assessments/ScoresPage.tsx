@@ -51,35 +51,44 @@ export function ScoresPage(){
   </>;
 }
 
+const initialsOf=(name:string)=>name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]!.toUpperCase()).join('')||'?';
+
+/** Classroom's grading shape: the students on the left, the chosen student's work in the middle, the grade card on the right. */
 function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,heading}:{rows:ScoreRow[];kind:Assessment['kind'];base:string;max:number;closed:boolean;onSaved:()=>Promise<void>;setMessage:(m:string)=>void;current:()=>ScoreRow[];heading:string}){
   const [permission,setPermission]=useState<ScoreRow|null>(null);
   const [ungradedOnly,setUngradedOnly]=useState(false);
-  const [saved,setSaved]=useState<Set<string>>(new Set());   // rows remount after a save, so the mark lives here
-  const focusNext=useRef<string|null>(null);
-  useEffect(()=>{if(focusNext.current){document.getElementById(focusNext.current)?.focus();focusNext.current=null}});
+  const [selected,setSelected]=useState<string|null>(null);
+  const focusScore=useRef(false);                       // set when Save and next moves on, so the next student's score box takes focus
   const ungraded=(r:ScoreRow)=>r.score===null||r.new_version_since_grading;
   const shown=ungradedOnly?rows.filter(ungraded):rows;
-  const mark=(id:string,on:boolean)=>setSaved(prev=>{const n=new Set(prev);if(on)n.add(id);else n.delete(id);return n});
+  const row=rows.find(r=>r.student_id===selected)??shown[0]??rows[0];
+  const status=(r:ScoreRow)=>!ungraded(r)?`${fmt(r.score)} / ${fmt(max)}`:r.score!==null?'Resubmitted':kind==='activity'?(r.latest?'Turned in':'Assigned'):'Not scored';
   if(rows.length===0)return <section className="panel"><h3>{heading}</h3><p className="muted">No students to show.</p></section>;
-  return <section className="panel"><h3>{heading}</h3>
+  const at=row?shown.findIndex(r=>r.student_id===row.student_id):-1;
+  const nextId=at>=0?shown[at+1]?.student_id:undefined;
+  return <section className="panel" aria-label={heading}><h3>{heading}</h3>
     {kind==='online_quiz'&&<p className="muted">A student who never attempted this quiz has no score yet. Record one (zero is a real score) so their grade can be calculated.</p>}
-    <label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>
-    <p className="muted">{rows.filter(ungraded).length} of {rows.length} still ungraded. Press Enter in a score box to save and move to the next student.</p>
-    {shown.length===0&&<p className="muted">Everyone listed has a score.</p>}
-    <div className="table-wrap" role="region" aria-label={heading} tabIndex={0}><table className="stack" role="table">
-      <thead role="rowgroup"><tr role="row"><th role="columnheader">Student</th>{kind==='activity'&&<th role="columnheader">Submission</th>}<th role="columnheader">Score (of {fmt(max)})</th><th role="columnheader">Feedback</th><th role="columnheader"><span className="sr-only">Actions</span></th></tr></thead>
-      <tbody role="rowgroup">{shown.map((r,i)=><ScoreRowEditor key={r.student_id+r.score_revision} row={r} kind={kind} base={base} max={max} closed={closed} onSaved={onSaved} setMessage={setMessage} onPermission={()=>setPermission(r)}
-        saved={saved.has(r.student_id)&&!r.new_version_since_grading} onEdit={()=>mark(r.student_id,false)} onDone={advance=>{mark(r.student_id,true);const now=current();setMessage(`Saved ${r.student}. ${now.filter(ungraded).length} of ${now.length} still need grading.`);focusNext.current=advance?(shown[i+1]?`s-${shown[i+1].student_id}`:'ungraded-only'):null}}/>)}</tbody></table></div>
+    <div className="grading">
+      <div className="grade-list"><label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>
+        <p className="muted">{rows.filter(ungraded).length} of {rows.length} still ungraded.</p>
+        {shown.length===0&&<p className="muted">Everyone listed has a score.</p>}
+        <ul className="plain" aria-label="Students">{shown.map(r=><li key={r.student_id}><button type="button" className={'grade-student'+(r.student_id===row?.student_id?' on':'')} aria-pressed={r.student_id===row?.student_id} onClick={()=>setSelected(r.student_id)}>
+          <span className="avatar" aria-hidden="true">{initialsOf(r.student)}</span><span className="who"><strong>{r.student}</strong><span className="muted">{status(r)}{r.latest?.is_late?' · late':''}</span></span></button></li>)}</ul></div>
+      {row&&<GradePanel key={row.student_id+row.score_revision} row={row} kind={kind} base={base} max={max} closed={closed} onSaved={onSaved} setMessage={setMessage} onPermission={()=>setPermission(row)} focusOnMount={focusScore.current}
+        hasNext={!!nextId} onDone={advance=>{const now=current();setMessage(`Saved ${row.student}. ${now.filter(ungraded).length} of ${now.length} still need grading.`);focusScore.current=advance&&!!nextId;if(advance&&nextId)setSelected(nextId);else if(advance)document.getElementById('ungraded-only')?.focus()}}/>}
+    </div>
     {permission&&<PermissionDialog base={base} row={permission} onClose={()=>setPermission(null)} onDone={()=>{setPermission(null);setMessage('Permission granted. The student can submit once more.');onSaved()}}/>}
   </section>;
 }
 
-function ScoreRowEditor({row,kind,base,max,closed,onSaved,setMessage,onPermission,saved,onEdit,onDone}:{row:ScoreRow;kind:Assessment['kind'];base:string;max:number;closed:boolean;onSaved:()=>Promise<void>;setMessage:(m:string)=>void;onPermission:()=>void;saved:boolean;onEdit:()=>void;onDone:(advance:boolean)=>void}){
+function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,onDone,hasNext,focusOnMount}:{row:ScoreRow;kind:Assessment['kind'];base:string;max:number;closed:boolean;onSaved:()=>Promise<void>;setMessage:(m:string)=>void;onPermission:()=>void;onDone:(advance:boolean)=>void;hasNext:boolean;focusOnMount:boolean}){
   const [score,setScore]=useState(row.score===null?'':String(row.score));
   const [feedback,setFeedback]=useState(row.feedback);
   const [error,setError]=useState('');
   const [saving,setSaving]=useState(false);
   const busy=useRef(false);   // synchronous: a second Enter must not send a second request
+  const input=useRef<HTMLInputElement>(null);
+  useEffect(()=>{if(focusOnMount)input.current?.focus()},[]); // eslint-disable-line react-hooks/exhaustive-deps
   async function save(advance=false){
     if(busy.current)return;busy.current=true;setSaving(true);setError('');
     try{await send('PUT',`${base}/scores/${row.student_id}`,{score:score.trim()===''?null:score.trim(),feedback,expected_revision:row.score_revision});setMessage(`Saved ${row.student}.`);await onSaved();onDone(advance)}
@@ -87,21 +96,24 @@ function ScoreRowEditor({row,kind,base,max,closed,onSaved,setMessage,onPermissio
     finally{busy.current=false;setSaving(false)}
   }
   const sub=row.latest;
-  return <tr role="row">
-    <td role="cell" data-label="Student">{row.student}<br/><span className="muted">{row.student_number}</span></td>
-    {kind==='activity'&&<td role="cell" data-label="Submission">{sub?<>
-      <a className="touch" href={`/api/files/${sub.file.id}/download`}>{sub.file.name}</a><br/>
-      <span className="muted">Version {sub.version} of {row.versions} · {when(sub.submitted_at)}</span>{sub.is_late&&<> <span className="badge">Late</span></>}
+  const card=<aside className="grade-card" aria-label={`Grade for ${row.student}`}><h4>{row.student}</h4><p className="muted">{row.student_number}</p>
+    <label htmlFor={`s-${row.student_id}`}>Points (of {fmt(max)})</label>
+    <input ref={input} id={`s-${row.student_id}`} inputMode="decimal" value={score} placeholder="Not scored" disabled={closed} readOnly={saving} aria-invalid={!!error} onChange={e=>setScore(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.nativeEvent.isComposing){e.preventDefault();void save(true)}}} aria-describedby={error?`max-${row.student_id} err-${row.student_id}`:`max-${row.student_id}`}/>
+    <span id={`max-${row.student_id}`} className="muted">{score===''?'Pending':Number(score)===0?'Recorded zero':`of ${fmt(max)}`}</span>
+    <label htmlFor={`f-${row.student_id}`}>Feedback for the student</label><textarea id={`f-${row.student_id}`} value={feedback} maxLength={5000} disabled={closed} readOnly={saving} onChange={e=>setFeedback(e.target.value)}/>
+    <div className="actions"><button className="primary" disabled={closed||saving} onClick={()=>void save(hasNext)}>{saving?'Saving…':hasNext?'Save and next':'Save'}</button>
+      {hasNext&&<button disabled={closed||saving} onClick={()=>void save()}>Save only</button>}
+      {kind==='activity'&&!closed&&<button onClick={onPermission}>Allow resubmission</button>}</div>
+    {error&&<p id={`err-${row.student_id}`} role="alert" className="error">{error}</p>}</aside>;
+  if(kind!=='activity')return <div className="grade-work">{card}</div>;
+  return <div className="grade-work has-sub">{card}
+    <section className="grade-sub" aria-label={`Work from ${row.student}`}>{sub?<>
+      <p><strong>{sub.file.name}</strong> <a className="touch" href={`/api/files/${sub.file.id}/download`}>Download</a><br/>
+        <span className="muted">Version {sub.version} of {row.versions} · {when(sub.submitted_at)}</span>{sub.is_late&&<> <span className="badge">Late</span></>}</p>
       {sub.note&&<p className="pre">{sub.note}</p>}
-      {row.new_version_since_grading&&<p className="warn" role="status">New version since you graded. Review it and save the score again.</p>}</>:<span className="muted">Nothing submitted</span>}
-      {row.permission_open&&<p className="muted">A resubmission permission is open.</p>}</td>}
-    <td role="cell" data-label={`Score (of ${fmt(max)})`}><label className="sr-only" htmlFor={`s-${row.student_id}`}>Score for {row.student}</label>
-      <input id={`s-${row.student_id}`} inputMode="decimal" value={score} placeholder="Not scored" disabled={closed} readOnly={saving} aria-invalid={!!error} onChange={e=>{setScore(e.target.value);onEdit()}} onKeyDown={e=>{if(e.key==='Enter'&&!e.nativeEvent.isComposing){e.preventDefault();void save(true)}}} aria-describedby={error?`max-${row.student_id} err-${row.student_id}`:`max-${row.student_id}`}/>
-      <span id={`max-${row.student_id}`} className="muted">{score===''?'Pending':Number(score)===0?'Recorded zero':`of ${fmt(max)}`}</span></td>
-    <td role="cell" data-label="Feedback"><label className="sr-only" htmlFor={`f-${row.student_id}`}>Feedback for {row.student}</label><textarea id={`f-${row.student_id}`} value={feedback} maxLength={5000} disabled={closed} readOnly={saving} onChange={e=>{setFeedback(e.target.value);onEdit()}}/></td>
-    <td role="cell"><div className="actions"><button className="primary" disabled={closed||saving} onClick={()=>void save()}>{saving?'Saving…':'Save'}</button>{saved&&<span className="badge done">Saved</span>}
-      {kind==='activity'&&!closed&&<button onClick={onPermission}>Allow resubmission</button>}</div>{error&&<p id={`err-${row.student_id}`} role="alert" className="error">{error}</p>}</td>
-  </tr>;
+      {row.new_version_since_grading&&<p className="warn" role="status">New version since you graded. Review it and save the score again.</p>}
+      <iframe className="file-frame" src={`/api/files/${sub.file.id}/preview`} title={`Preview of ${sub.file.name}`}/></>:<p className="muted">Nothing submitted yet.</p>}
+      {row.permission_open&&<p className="muted">A resubmission permission is open.</p>}</section></div>;
 }
 
 function PermissionDialog({base,row,onClose,onDone}:{base:string;row:ScoreRow;onClose:()=>void;onDone:()=>void}){

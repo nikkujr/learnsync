@@ -184,3 +184,17 @@ def test_students_see_their_activity_state(graded):
     item = next(i for i in graded["st1"].get(la(graded, "/assessments")).json() if i["id"] == aid)
     assert item["state"] == "available" and item["submissions"] == [] and item["result"] is None
     assert "score" not in item and item["can_submit"] is True
+
+
+def test_a_submitted_pdf_can_be_previewed_by_its_owner_and_teacher_only(db, graded):
+    aid = make_manual(graded, "activity", "Business plan", points="20", category_key="activity", deadline=iso(24))
+    fid = submit_pdf(graded["st1"], graded, aid).json()["file"]["id"]
+    url = f"/api/files/{fid}/preview"
+    for who in ("st1", "fac"):
+        shown = graded[who].get(url)
+        assert shown.status_code == 200 and shown.headers["content-disposition"].startswith("inline")
+        assert shown.headers["x-content-type-options"] == "nosniff" and "default-src 'none'" in shown.headers["content-security-policy"]
+    assert graded["st2"].get(url).status_code == 404 and graded["admin"].get(url).status_code == 404
+    assert TestClient(app).get(url).status_code == 401
+    other = Api(make_account(db, "preview-sub-other@example.com", "faculty").email)
+    assert other.get(url).status_code == 404

@@ -74,7 +74,7 @@ PREVIEW_TYPES = {"application/pdf": b"%PDF", "image/png": bytes([0x89, 0x50, 0x4
 def preview(file_id: UUID, actor=Depends(current_account), db: Session = Depends(get_db)):
     file = db.get(StoredFile, file_id)
     magic = PREVIEW_TYPES.get(file.content_type) if file else None
-    if not file or file.purpose != "material" or magic is None or not may_download(db, file, actor)             or not path_of(file).is_file():
+    if not file or file.purpose not in {"material", "submission"} or magic is None or not may_download(db, file, actor)             or not path_of(file).is_file():
         fail(404, "not_found", "No preview is available for this file.")
     with path_of(file).open("rb") as fh:
         if not fh.read(len(magic)).startswith(magic):

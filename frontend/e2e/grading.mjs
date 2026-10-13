@@ -31,10 +31,10 @@ try{
   const sv=(await call(teach,'PUT',`/teach/offerings/${O}/syllabus/draft`,{expected_counter:d.counter,outline,grading_policy:policy})).data;
   await call(teach,'POST',`/teach/offerings/${O}/syllabus/draft/publish`,{expected_counter:sv.counter});
   await teach.goto(`/faculty/offerings/${O}/classwork?type=activity`);await teach.getByText('+ Create').click();await teach.getByRole('button',{name:'Activity',exact:true}).click();
-  const dl=teach.locator('dialog');await dl.getByLabel('Title').fill('Business idea pitch');
-  await dl.getByRole('button',{name:/Create/}).click();await teach.waitForURL(/edit/);await teach.waitForTimeout(1200);
+  await teach.waitForURL(/edit/);await teach.waitForTimeout(1200);      // Create opens the compose page at once
+  await teach.getByLabel('Title',{exact:true}).fill('Business idea pitch');
   await teach.getByLabel('Grading category').selectOption({label:'Activities (100%)'});await teach.getByLabel('Grading period').selectOption({label:'Midterm'});
-  await teach.getByLabel('Maximum points').fill('20');await teach.getByLabel('Due').fill(new Date(Date.now()+3*864e5).toISOString().slice(0,16));
+  await teach.getByLabel('Points',{exact:true}).fill('20');await teach.getByLabel('Due').fill(new Date(Date.now()+3*864e5).toISOString().slice(0,16));
   await teach.waitForTimeout(2500);await teach.getByRole('button',{name:'Assign',exact:true}).click();await teach.waitForTimeout(2000);
   const pdf=Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
   for(const state of S){const p=await newPage(browser,{state});await p.goto(`/student/offerings/${O}/classwork?type=activity`);await p.waitForLoadState('networkidle');
@@ -46,12 +46,14 @@ try{
   const base=`/teach/offerings/${O}/assessments/${teach.url().match(/assessments\/([\w-]+)\/scores/)[1]}`;
   const rows=(await call(teach,'GET',`${base}/scores`)).data;const sid=n=>rows.find(r=>r.student===`Demo student ${n}`).student_id;
   const active=()=>teach.evaluate(()=>document.activeElement?.id||'');
+  const pick=name=>teach.locator('.grade-student',{hasText:name}).click();          // choose a student in the list
+  const points=teach.getByLabel(/^Points/);
   const puts=[];teach.on('request',r=>{if(r.method()==='PUT'&&r.url().includes('/scores/'))puts.push(r.url().split('/scores/')[1])});
 
   // ---- A: the refetch is slow; focus must still end on the next student's score box
   await teach.getByLabel('Show ungraded only').check();
   await teach.route('**/scores',async r=>{if(r.request().method()==='GET')await new Promise(x=>setTimeout(x,1500));await r.continue()});
-  await teach.getByLabel('Score for Demo student 1').fill('18');await teach.keyboard.press('Enter');
+  await pick('Demo student 1');await points.fill('18');await teach.keyboard.press('Enter');
   await teach.waitForTimeout(3000);
   check('A: focus lands on the next student after a slow refetch',(await active())===`s-${sid(2)}`,await active());
   await teach.unroute('**/scores');
@@ -60,24 +62,24 @@ try{
   await teach.keyboard.type('15');await teach.keyboard.press('Enter');await teach.keyboard.press('Enter');await teach.waitForTimeout(2500);
   check('B: a double Enter sends exactly one save',puts.filter(x=>x.startsWith(sid(2))).length===1,JSON.stringify(puts));
   // ---- E: Enter in the feedback box is a newline, not a save
-  const fb=teach.getByLabel('Feedback for Demo student 3');puts.length=0;
+  await pick('Demo student 3');const fb=teach.getByLabel('Feedback for the student');puts.length=0;
   await fb.click();await teach.keyboard.type('a');await teach.keyboard.press('Enter');await teach.keyboard.type('b');
   check('E: Enter in feedback is a newline and saves nothing',(await fb.inputValue())==='a\nb'&&puts.length===0);
   // ---- F: a feedback-only save (blank score) leaves the student ungraded, and the announced count says so
-  await fb.fill('Please add a cost estimate.');await teach.getByRole('button',{name:'Save'}).click();await teach.waitForTimeout(2000);
+  await fb.fill('Please add a cost estimate.');await teach.getByRole('button',{name:/^Save( and next)?$/}).click();await teach.waitForTimeout(2000);
   const said=await teach.locator('p[role=status]').first().innerText();
   check('F: a feedback-only save still counts that student as ungraded',/Saved Demo student 3\. 1 of 3 still need grading\./.test(said),said);
   // ---- accessibility of the populated page
   const violations=await axe(teach);
   check('axe finds no violations on the populated scores page',violations.length===0,JSON.stringify(violations.map(v=>v.id)));
   // ---- D: saving the last visible row empties the filter; focus must not fall to the body
-  await teach.getByLabel('Score for Demo student 3').fill('14');await teach.keyboard.press('Enter');await teach.waitForTimeout(2500);
+  await points.fill('14');await teach.keyboard.press('Enter');await teach.waitForTimeout(2500);
   check('D: after the last visible row, focus moves to the filter',(await active())==='ungraded-only',await active());
   // ---- C: a stale revision keeps the typed value, shows the conflict and does not advance
   await teach.getByLabel('Show ungraded only').uncheck();
   const cur=(await call(teach,'GET',`${base}/scores`)).data.find(r=>r.student_id===sid(1));
   await call(teach,'PUT',`${base}/scores/${sid(1)}`,{score:'1',feedback:'',expected_revision:cur.score_revision});   // someone else saves first
-  const box=teach.getByLabel('Score for Demo student 1');await box.fill('19');puts.length=0;await box.press('Enter');await teach.waitForTimeout(1500);
+  await pick('Demo student 1');const box=points;await box.fill('19');puts.length=0;await box.press('Enter');await teach.waitForTimeout(1500);
   check('C: conflict keeps the typed score',(await box.inputValue())==='19');
   check('C: conflict is shown to the teacher',await teach.locator(`#err-${sid(1)}`).count()===1,await teach.locator(`#err-${sid(1)}`).innerText().catch(()=>''));
   check('C: focus stays on the conflicting box',(await active())===`s-${sid(1)}`,await active());
