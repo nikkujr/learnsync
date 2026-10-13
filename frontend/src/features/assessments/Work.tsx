@@ -87,16 +87,18 @@ export function WorkDetail(){
     <p className="back"><Link to={origin.to}>← Back to {origin.label}</Link></p>
     <div className="assignment"><article className="panel"><p className="eyebrow">{item.kind==='online_quiz'?'Quiz':'Activity'}</p><h2>{item.title}</h2>
       {item.instructions&&<p className="pre">{item.instructions}</p>}
+      {item.attachments&&item.attachments.length>0&&<><h3>Materials</h3><ul className="rows" aria-label="Materials">{item.attachments.map(x=><li key={x.id}>{x.kind==='file'&&x.file?<a href={`/api/files/${x.file.id}/download`}>{x.title}</a>:<a href={x.url??'#'} target="_blank" rel="noopener noreferrer">{x.title}</a>}<span className="muted">{x.kind==='file'?x.file?.name:'Opens in a new tab'}</span></li>)}</ul></>}
       <p className="muted">{item.available_from?`Opens ${when(item.available_from)}. `:''}{item.deadline?`Due ${when(item.deadline)}.${item.allow_late?' Late work is accepted.':''}`:'No deadline.'} Worth {fmt(item.max_points)} points.</p>
       {item.result&&<p role="status"><strong>Released result: {fmt(item.result.score)} / {fmt(item.result.max_points)}</strong>{item.result.feedback&&<><br/>{item.result.feedback}</>}</p>}
       </article>
       <aside className="panel" aria-label="Your work"><h3>Your work</h3><p><strong>{STATE_LABEL[item.state]??item.state}</strong></p>
+      {item.excused&&<p role="status"><strong>Excused.</strong> Your teacher left this out of your grade. Nothing more to do.</p>}
       {message&&<p role="status">{message}</p>}
-      {item.kind==='online_quiz'&&<>
+      {item.kind==='online_quiz'&&!item.excused&&<>
         <p className="muted">Attempts used: {item.attempts_used??0} of {item.max_attempts}. Your answers are saved as you go.</p>
         {(item.state==='available'||item.state==='in_progress')&&<button className="primary" disabled={busy} onClick={startQuiz}>{item.state==='in_progress'?'Continue your attempt':'Start the quiz'}</button>}
         {item.state==='not_open'&&<p>This quiz has not opened yet.</p>}{item.state==='closed'&&<p>The deadline has passed.</p>}{item.state==='done'&&<p>You have used all your attempts.</p>}</>}
-      {item.kind==='activity'&&<>
+      {item.kind==='activity'&&!item.excused&&<>
         {item.state==='not_open'&&<p>This activity has not opened yet.</p>}
         {item.requires_file===false?(item.can_submit?<form onSubmit={markDone}>
           <p className="muted">Nothing to upload. Mark it done when you have finished.</p>

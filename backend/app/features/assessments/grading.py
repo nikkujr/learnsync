@@ -143,13 +143,18 @@ def assessment_category(ctx, enrollment, key, period):
         return {"status": "no_data", "raw": None, "earned": None, "possible": None,
                 "missing": ["Nothing assigned in this category yet"], "sources": []}
     earned, possible, missing, sources = Decimal(0), Decimal(0), [], []
+    excused = 0
     for a, rev in items:
         row = ctx.scores.get((a.id, enrollment.student_id))
         sources.append({"assessment_id": a.id, "title": rev.title, "kind": a.kind,
                         "revision_version": rev.version,
                         "score": row.score if row else None, "max_points": rev.max_points,
                         "attempt_id": row.selected_attempt_id if row else None,
-                        "submission_id": row.selected_submission_id if row else None})
+                        "submission_id": row.selected_submission_id if row else None,
+                        "excused": bool(row and row.excused)})
+        if row is not None and row.excused:          # waived for this student: left out of both earned and possible
+            excused += 1
+            continue
         if row is None or row.score is None:
             missing.append(rev.title)
             continue
@@ -160,7 +165,8 @@ def assessment_category(ctx, enrollment, key, period):
                 "missing": missing, "sources": sources}
     if possible <= 0:
         return {"status": "no_data", "raw": None, "earned": None, "possible": None,
-                "missing": ["No points available"], "sources": sources}
+                "missing": ["All work in this category is excused" if excused else "No points available"],
+                "sources": sources}
     return {"status": "ok", "raw": earned / possible * 100, "earned": earned,
             "possible": possible, "missing": [], "sources": sources}
 
@@ -252,6 +258,7 @@ def gradebook(db, offering):
                 "revision": score.revision if score else 0,
                 "released_score": rel.score if rel else None,
                 "release_number": rel.release_number if rel else 0,
+                "excused": bool(score and score.excused),
                 "unreleased_change": bool(score and score.score is not None and (
                     rel is None or rel.score != score.score or rel.feedback != score.feedback))}
             if a.kind == "online_quiz":

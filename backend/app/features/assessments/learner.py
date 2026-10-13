@@ -6,11 +6,11 @@ from app.errors import fail
 from app.features.accounts.models import now
 from app.features.teaching.access import targeted
 
-from . import submissions
+from . import attachments, submissions
 from .attempts import used_attempts
 from .definitions import revision, section_ids_of
 from .grading import own_published_grades
-from .models import Assessment, AssessmentRevision, QuizAttempt
+from .models import Assessment, AssessmentRevision, AssessmentScore, QuizAttempt
 from .results import latest_release, student_results
 
 INTERACTIVE = {"online_quiz", "activity"}
@@ -45,7 +45,9 @@ def item_view(db, student, enrollment, a, rev):
            "available_from": rev.available_from, "deadline": rev.deadline,
            "allow_late": rev.allow_late, "max_points": rev.max_points,
            "anchor_node_id": rev.anchor_node_id, "result": result_view(db, a.id, student.id),
-           "requires_file": rev.requires_file}
+           "requires_file": rev.requires_file, "attachments": attachments.listing(db, rev),
+           "excused": bool(db.scalar(select(AssessmentScore.excused).where(
+               AssessmentScore.assessment_id == a.id, AssessmentScore.student_id == student.id)))}
     if a.kind == "online_quiz":
         used = used_attempts(db, a.id, student.id)
         current = db.scalar(select(QuizAttempt.id).where(
@@ -87,6 +89,8 @@ BUCKETS = ("todo", "again", "upcoming", "awaiting", "done", "closed")   # the or
 def bucket_of(w):
     """Where a piece of work belongs for the student. The one rule behind My work and the dashboard."""
     state = w["state"]
+    if w.get("excused"):
+        return "done"                       # waived by the teacher: nothing left for the student to do
     if state == "not_open":
         return "upcoming"
     if w["kind"] == "online_quiz":

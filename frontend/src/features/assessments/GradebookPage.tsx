@@ -1,5 +1,5 @@
 import {useToast} from '../../components/undo';
-import {useState} from 'react';
+import {useRef,useState} from 'react';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {ApiError,api,post,send,errorText} from '../../app/api';
@@ -26,16 +26,16 @@ const cellKey=(columnId:string,studentId:string)=>`${columnId}:${studentId}`;
 export function GradebookPage(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const closed=offering.term_status==='closed';
-  const here=useHere();const toast=useToast();
+  const here=useHere();
   const query=useQuery({queryKey:['gradebook',offering.id],queryFn:()=>api<Gradebook>(`/teach/offerings/${offering.id}/gradebook`)});
   const [detail,setDetail]=useState<GradeRow|null>(null);
   const [publishing,setPublishing]=useState<string|null>(null);
   const [message,setMessage]=useState('');
   const [find,setFind]=useState('');const [section,setSection]=useState('');const [only,setOnly]=useState('');   // view filters: they never change what Publish acts on
-  const [editing,setEditing]=useState(false);
   const [edits,setEdits]=useState<Record<string,string>>({});          // cellKey -> typed score, only for cells that differ
   const [rejected,setRejected]=useState<Record<string,string>>({});    // cellKey -> why the server refused it
   const [saving,setSaving]=useState(false);
+  const inflight=useRef(new Set<string>());                              // a cell being saved is not saved twice (Enter and leaving the cell both commit)
   const refresh=()=>queryClient.invalidateQueries({queryKey:['gradebook',offering.id]});
 
   if(query.isPending)return <p>Loading gradebook…</p>;
@@ -55,7 +55,7 @@ export function GradebookPage(){
   const next=periods.find(p=>stats[p].changes>0);
   const courseUnlocked=book.policy.periods.every(p=>book.rows.some(r=>r.published[p.key]));
   const flaggedRows=book.rows.filter(r=>Object.values(r.published).some(p=>p.needs_review));
-  const changed=Object.keys(edits).length;
+  const editing=!closed;                                                  // like Classroom: type straight into a cell; a closed term is read-only
 
   const editable=(kind:string,cell?:Cell)=>!!cell&&!(kind==='online_quiz'&&cell.attempt_state==='submitted');
   function typeScore(column:string,student:string,original:Cell,value:string){
@@ -63,19 +63,22 @@ export function GradebookPage(){
     setEdits(prev=>{const n={...prev};if(value.trim()===before.trim())delete n[key];else n[key]=value;return n});
     setRejected(prev=>{if(!prev[key])return prev;const n={...prev};delete n[key];return n});
   }
-  async function saveAll(){
-    setMessage('');setRejected({});setSaving(true);
-    const cells=Object.entries(edits).map(([key,value])=>{const [assessment_id,student_id]=key.split(':');
-      const cell=book.rows.find(r=>r.student_id===student_id)!.cells[assessment_id];
-      return {assessment_id,student_id,score:value.trim()===''?null:value.trim(),feedback:cell.feedback,expected_revision:cell.revision}});
-    try{await send('PUT',`/teach/offerings/${offering.id}/gradebook/scores`,{cells});
-      toast(`Saved ${cells.length} score${cells.length===1?'':'s'}.`);setEditing(false);setEdits({});setMessage(`Saved ${cells.length} score${cells.length===1?'':'s'}. Students see changes only after you return the results.`);await refresh()}
+  /** Save one typed cell (working score only: students see it after Return). The server still checks the cell's revision, so a colleague's change is reported, not overwritten. */
+  async function commit(columnId:string,studentId:string){
+    const key=cellKey(columnId,studentId);const value=edits[key];
+    if(value===undefined||inflight.current.has(key))return;
+    const cell=book.rows.find(r=>r.student_id===studentId)!.cells[columnId];
+    inflight.current.add(key);setSaving(true);setMessage('');
+    try{await send('PUT',`/teach/offerings/${offering.id}/gradebook/scores`,{cells:[{assessment_id:columnId,student_id:studentId,score:value.trim()===''?null:value.trim(),feedback:cell.feedback,expected_revision:cell.revision}]});
+      setEdits(prev=>{const n={...prev};delete n[key];return n});setRejected(prev=>{if(!prev[key])return prev;const n={...prev};delete n[key];return n});
+      setMessage('Saved. Students see scores only after you return them.');await refresh()}
     catch(e){
-      if(e instanceof ApiError&&e.code==='batch_rejected'){setRejected(e.fields);setMessage(`${e.message} Fix the marked cells, or reload if someone else changed them.`)}
+      if(e instanceof ApiError&&e.code==='batch_rejected'){setRejected(prev=>({...prev,...e.fields}));setMessage('A colleague changed this score first. Their value is shown; your typed value is kept (Esc undoes it).');await refresh()}
       else setMessage(errorText(e));
-    }finally{setSaving(false)}
+    }finally{inflight.current.delete(key);setSaving(false)}
   }
-  const leaveEditing=()=>{setEditing(false);setEdits({});setRejected({});setMessage('')};
+  const focusCell=(col:string,row:number)=>{document.querySelector<HTMLInputElement>(`input.score-input[data-col="${col}"][data-row="${row}"]`)?.focus()};
+  const revert=(columnId:string,studentId:string)=>{const key=cellKey(columnId,studentId);setEdits(prev=>{const n={...prev};delete n[key];return n});setRejected(prev=>{if(!prev[key])return prev;const n={...prev};delete n[key];return n})};
 
   const periodRow=(p:string)=><li key={p}><span className="grow"><strong>{PERIOD_LABEL[p]??p}</strong>
     <span className="muted">{stats[p].changes>0?`${stats[p].changes} ready to publish`:stats[p].ready>0?'Nothing new to publish':'No grades are ready yet'}{stats[p].review>0?` · ${stats[p].review} need review`:''}{stats[p].notReady.length>0&&stats[p].ready>0?` · ${stats[p].notReady.length} not ready`:''}</span></span>
@@ -101,19 +104,18 @@ export function GradebookPage(){
         <div className="actions"><label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or student number"/></label>
           <label>Section<select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
           <label>Period<select value={only} onChange={e=>setOnly(e.target.value)}><option value="">All periods</option>{book.policy.periods.map(p=><option key={p.key} value={p.key}>{PERIOD_LABEL[p.key]??p.key}</option>)}</select></label></div></details>
-      <p className="muted" role="status">Showing {rows.length} of {book.rows.length} students.{editing?' Editing: type a score in any cell, then save once.':''}</p>
-      {!editing&&<div className="actions"><button disabled={closed} onClick={()=>{setEditing(true);setMessage('')}}>Edit scores</button><span className="muted">{closed?'This term is closed, so scores are read-only.':'Type scores straight into the table below.'}</span></div>}
-      {editing&&<div className="actions sticky-bar"><button className="primary" disabled={changed===0||saving} onClick={saveAll}>{saving?'Saving…':changed===0?'Save scores':`Save ${changed} changed score${changed===1?'':'s'}`}</button><button disabled={saving} onClick={leaveEditing}>Cancel</button><span className="muted">{changed===0?'No changes yet.':'Nothing is saved until you press Save.'}</span></div>}
+      <p className="muted" role="status">Showing {rows.length} of {book.rows.length} students.{closed?' This term is closed, so scores are read-only.':' Type a score in any cell: it saves when you press Enter or leave the cell. Enter moves down, Tab moves across, Esc undoes.'}{saving?' Saving…':''}</p>
       <div className="table-wrap gradebook" role="region" aria-label="Gradebook, scrolls sideways" tabIndex={0}><table>
         <thead>
           <tr><th className="sticky">Student</th>{shown.filter(p=>p!=='course').map(p=><th key={p} colSpan={byPeriod(p).length+1}>{PERIOD_LABEL[p]??p}</th>)}<th>Course</th></tr>
           <tr><th className="sticky"><span className="sr-only">Student</span></th>
             {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><th key={c.id}><Link state={here} to={`/faculty/offerings/${offering.id}/assessments/${c.id}/scores`} title="Open this assessment's scores and attempts">{c.title}</Link><br/><span className="muted">Out of {fmt(c.max_points)}</span><br/><span className="muted">{label(c.category_key)}</span></th>),<th key={p+'g'}>Grade</th>])}
             <th>Grade</th></tr></thead>
-        <tbody>{rows.map(r=><tr key={r.student_id}>
+        <tbody>{rows.map((r,rowIndex)=><tr key={r.student_id}>
           <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}{r.grades.course?.grade!=null?` · Overall ${fmt(r.grades.course.grade)}`:''}</span></span></span></th>
           {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} deadline={c.deadline} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
-            onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)}/></td>),
+            onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)} nav={{col:c.id,row:rowIndex}}
+            onCommit={()=>void commit(c.id,r.student_id)} onRevert={()=>revert(c.id,r.student_id)} onMove={d=>focusCell(c.id,rowIndex+d)}/></td>),
             <td key={p+'g'}><GradeCell row={r} period={p} onReview={setDetail}/></td>])}
           <td><GradeCell row={r} period="course" onReview={setDetail}/></td></tr>)}</tbody></table></div></section>
 
@@ -142,21 +144,23 @@ function PublishDialog({offeringId,period,stats,onClose,onPublished}:{offeringId
     <div className="actions"><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy||stats.changes===0} onClick={go}>{busy?'Publishing…':stats.changes===0?'Nothing new to publish':`Publish ${stats.changes} grade${stats.changes===1?'':'s'}`}</button></div></Dialog>;
 }
 
-function CellView({cell,kind,deadline,column,student,editing,value,problem,onType}:{cell?:Cell;kind:string;deadline?:string|null;column:string;student:string;editing:boolean;value?:string;problem?:string;onType:(v:string)=>void}){
+function CellView({cell,kind,deadline,column,student,editing,value,problem,onType,nav,onCommit,onRevert,onMove}:{cell?:Cell;kind:string;deadline?:string|null;column:string;student:string;editing:boolean;value?:string;problem?:string;onType:(v:string)=>void;nav:{col:string;row:number};onCommit:()=>void;onRevert:()=>void;onMove:(delta:number)=>void}){
   if(!cell)return <span className="muted" title="Does not apply to this student's section">n/a</span>;
   const state=kind==='online_quiz'&&cell.score===null?(cell.attempt_state==='in_progress'?'In progress':'Not attempted'):null;
   const shownValue=value??(cell.score===null?'':String(cell.score));
   // Classroom's colours, always with a word as well: missing (red), turned in or a score not returned yet (green), returned (plain)
   const handedIn=kind==='online_quiz'?cell.attempt_state==='submitted':!!cell.turned_in;
-  const missing=cell.score===null&&!handedIn&&(kind==='activity'||kind==='online_quiz')&&!!deadline&&Date.parse(deadline)<Date.now();
+  const missing=!cell.excused&&cell.score===null&&!handedIn&&(kind==='activity'||kind==='online_quiz')&&!!deadline&&Date.parse(deadline)<Date.now();
   const tone=cell.score!==null?(cell.unreleased_change?'cell-draft':''):handedIn?'cell-turned':missing?'cell-missing':'';
   return <div className={`cell ${tone}`}>
-    {editing?<input className="score-input" inputMode="decimal" aria-label={`${column}, score for ${student}`} aria-invalid={!!problem} value={shownValue} placeholder="—" onChange={e=>onType(e.target.value)}/>
+    {editing?<input className="score-input" inputMode="decimal" data-col={nav.col} data-row={nav.row} aria-label={`${column}, score for ${student}`} aria-invalid={!!problem} value={shownValue} placeholder="—" onChange={e=>onType(e.target.value)} onBlur={onCommit}
+        onKeyDown={e=>{if(e.nativeEvent.isComposing)return;if(e.key==='Enter'){e.preventDefault();onCommit();onMove(e.shiftKey?-1:1)}else if(e.key==='Escape'){e.preventDefault();onRevert()}}}/>
       :<span>{cell.score===null?'—':fmt(cell.score)}</span>}
     {problem&&<span className="error" role="alert"> {problem}</span>}
     {state&&!missing&&<span className="muted"> {state}</span>}
     {missing&&<span className="tone-text"> Missing</span>}{cell.score===null&&handedIn&&<span className="tone-text"> Turned in</span>}
-    {cell.unreleased_change&&<span className="badge"> Unreleased change</span>}</div>;
+    {cell.excused&&<span className="badge"> Excused</span>}
+    {cell.unreleased_change&&!cell.excused&&<span className="badge"> Unreleased change</span>}</div>;
 }
 
 function GradeCell({row,period,onReview}:{row:GradeRow;period:string;onReview:(r:GradeRow)=>void}){

@@ -1,8 +1,9 @@
 import json
+import uuid
 
 from helpers import POLICY, publish_syllabus
 from test_activities import score
-from test_assessments import a, la, make_manual, make_quiz, start, submit
+from test_assessments import a, iso, la, make_manual, make_quiz, start, submit
 
 
 def g(c, path=""):
@@ -467,3 +468,47 @@ def test_a_students_standing_matches_the_gradebook_and_is_faculty_only(db, grade
     gone = fac.get(url).json()
     assert gone["student"]["enrollment_status"] == "withdrawn" and gone["calculation"] is None and gone["calculation_note"]
     assert gone["progress"] is None
+
+
+# ---------------- excusing a student from one assessment ----------------
+
+def test_an_excused_assessment_is_left_out_of_that_students_grade_only(graded):
+    fac, st1 = graded["fac"], graded["st1"]
+    s1, s2 = graded["students"][0], graded["students"][1]
+    full = make_manual(graded, "offline_quiz", "Quiz A", "10", category_key="quiz", period="midterm")
+    zero = make_manual(graded, "offline_quiz", "Quiz B", "10", category_key="quiz", period="midterm")
+    for student in (s1, s2):
+        assert score(graded, full, student, 10).status_code == 200
+        assert score(graded, zero, student, 0).status_code == 200
+    percent = lambda rows, who: next(c for c in rows[who]["grades"]["midterm"]["categories"] if c["key"] == "quiz")["percent"]
+    rows, _ = book(graded)
+    assert percent(rows, "s1") == 50.0 and percent(rows, "s2") == 50.0
+    done = fac.put(g(graded, f"/assessments/{zero}/excuse/{s1.id}"), {"excused": True})
+    assert done.status_code == 200 and done.json()["excused"] is True
+    rows, _ = book(graded)
+    assert percent(rows, "s1") == 100.0                                    # Quiz B no longer counts for s1
+    assert percent(rows, "s2") == 50.0                                     # and still counts for everyone else
+    assert rows["s1"]["cells"][zero]["excused"] is True and rows["s2"]["cells"][zero]["excused"] is False
+    # the student sees it as done, not as something to do, and nothing is returned for it
+    assert fac.post(g(graded, f"/assessments/{zero}/release"), {"student_ids": None}).json()["released"] == 1   # only s2
+    # excusing is reversible and audited-by-revision: restoring brings the score back into the grade
+    assert fac.put(g(graded, f"/assessments/{zero}/excuse/{s1.id}"), {"excused": False}).json()["excused"] is False
+    rows, _ = book(graded)
+    assert percent(rows, "s1") == 50.0
+    # an unrelated person cannot excuse, and an unknown student is refused
+    assert st1.put(g(graded, f"/assessments/{zero}/excuse/{s1.id}"), {"excused": True}).status_code == 403
+    assert fac.put(g(graded, f"/assessments/{zero}/excuse/{uuid.uuid4()}"), {"excused": True}).status_code == 422
+
+
+def test_excusing_flags_a_published_grade_for_review_and_the_student_sees_the_work_as_done(graded):
+    fac, st1 = graded["fac"], graded["st1"]
+    s1 = graded["students"][0]
+    quiz = make_manual(graded, "activity", "Excuse me", "10", category_key="activity", period="midterm", deadline=iso(24))
+    assert any(w["title"] == "Excuse me" for w in st1.get("/api/dashboard/student/todo").json()["todo"])
+    assert fac.put(g(graded, f"/assessments/{quiz}/excuse/{s1.id}"), {"excused": True}).status_code == 200
+    page = st1.get("/api/dashboard/student/todo").json()
+    assert "Excuse me" not in [w["title"] for w in page["todo"]]
+    done = next(w for w in page["done"] if w["title"] == "Excuse me")
+    assert done["excused"] is True and done["result"] is None
+    item = next(i for i in st1.get(la(graded, "/assessments")).json() if i["id"] == quiz)
+    assert item["excused"] is True and item["bucket"] == "done"

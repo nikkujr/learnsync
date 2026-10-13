@@ -197,6 +197,7 @@ class AssessmentScore(Base):
     selected_submission_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("activity_submission.id"))
     revision: Mapped[int] = mapped_column(Integer, default=0)   # 0 = never recorded
+    excused: Mapped[bool] = mapped_column(Boolean, default=False)   # waived for this student: left out of their grade
     graded_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("account.id"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now,
                                                  onupdate=now)
@@ -279,3 +280,18 @@ class GradeReviewState(Base):
     needs_review: Mapped[bool] = mapped_column(Boolean, default=True)
     reason: Mapped[str] = mapped_column(Text, default="")
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AssessmentAttachment(Base):
+    """A file or a link a teacher attaches to an assignment. It belongs to one revision, so a published version keeps
+    exactly the attachments students saw, and a new draft starts with a copy of them."""
+    __tablename__ = "assessment_attachment"
+    __table_args__ = (CheckConstraint("kind IN ('file','link')", name="attachment_kind"),)
+    id: Mapped[uuid.UUID] = uid()
+    revision_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assessment_revision.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(8))
+    title: Mapped[str] = mapped_column(String(200))
+    url: Mapped[str | None] = mapped_column(Text)
+    file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_file.id"))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

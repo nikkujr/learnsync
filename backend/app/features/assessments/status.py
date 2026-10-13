@@ -12,6 +12,8 @@ def counts(db, offering, assessment):
         ResultPublication.assessment_id == assessment.id))) & ids
     scored = set(db.scalars(select(AssessmentScore.student_id).where(
         AssessmentScore.assessment_id == assessment.id, AssessmentScore.score.is_not(None)))) & ids
+    excused = set(db.scalars(select(AssessmentScore.student_id).where(
+        AssessmentScore.assessment_id == assessment.id, AssessmentScore.excused.is_(True)))) & ids
     submitted = set()
     if assessment.kind == "activity":
         submitted = set(db.scalars(select(ActivitySubmission.student_id).where(
@@ -20,4 +22,5 @@ def counts(db, offering, assessment):
         submitted = set(db.scalars(select(QuizAttempt.student_id).where(
             QuizAttempt.assessment_id == assessment.id, QuizAttempt.state == "submitted"))) & ids
     return {"total": len(ids), "graded": len(released), "turned_in": len(submitted - released),
-            "assigned": len(ids - submitted - released - scored), "to_return": len(scored - released)}
+            "assigned": len(ids - submitted - released - scored - excused),
+            "to_return": len(scored - released - excused), "excused": len(excused)}

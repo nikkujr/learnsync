@@ -52,7 +52,7 @@ def work_buckets(db, student, offering, enrollment, subject):
     for w in learner.listing(db, student, offering, enrollment):
         base = {"offering_id": offering.id, "assessment_id": w["id"], "kind": w["kind"], "title": w["title"],
                 "subject": subject.code, "deadline": w["deadline"], "available_from": w["available_from"],
-                "late_allowed": w["late_allowed"]}
+                "late_allowed": w["late_allowed"], "excused": w["excused"]}
         bucket = w["bucket"]
         if bucket == "again":
             again.append({**base, "attempts_left": w["max_attempts"] - w["attempts_used"]})

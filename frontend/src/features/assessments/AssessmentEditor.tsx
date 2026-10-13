@@ -1,7 +1,7 @@
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useNavigate,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {api,post,send,errorText} from '../../app/api';
+import {api,post,send,errorText,upload} from '../../app/api';
 import {queryClient,useAuth} from '../../app/providers';
 import {catOfKind} from '../../components/ClassworkTypes';
 import {useConfirm} from '../../components/confirm';
@@ -12,7 +12,7 @@ import {DraftNotices,SaveIndicator,draftKey,useAutosave,useFlushOnLeave} from '.
 import {nodeLabels,type SyllabusState} from '../teaching/types';
 import {usePolicy} from './Assessments';
 import {QuestionList} from './QuestionEditor';
-import {KIND_LABEL,toIso,toLocal,type Assessment,type AssessmentRev,type DraftContent,type Question} from './types';
+import {KIND_LABEL,toIso,toLocal,type Attachment,type Assessment,type AssessmentRev,type DraftContent,type Question} from './types';
 
 const toContent=(r:AssessmentRev):DraftContent=>({title:r.title,instructions:r.instructions,category_key:r.category_key??'',period:r.period??'',max_points:String(r.max_points??0),available_from:toLocal(r.available_from),deadline:toLocal(r.deadline),allow_late:r.allow_late,requires_file:r.requires_file??true,max_attempts:r.max_attempts,score_rule:r.score_rule,include_in_grade:r.include_in_grade,anchor_node_id:r.anchor_node_id,questions:r.questions});
 const toPayload=(v:DraftContent,counter:number)=>({expected_counter:counter,title:v.title,instructions:v.instructions,category_key:v.category_key||null,period:v.period||null,max_points:v.max_points||'0',available_from:toIso(v.available_from),deadline:toIso(v.deadline),allow_late:v.allow_late,requires_file:v.requires_file,max_attempts:v.max_attempts,score_rule:v.score_rule,include_in_grade:v.include_in_grade,anchor_node_id:v.anchor_node_id,questions:v.questions.map(q=>({...q,points:String(q.points||0)}))});
@@ -69,6 +69,24 @@ function PasteQuestions({offeringId,locked,onAdd}:{offeringId:string;locked:bool
       {parsed.errors.length>0&&<ul className="rows">{parsed.errors.map((e,i)=><li key={i} className="error">Line {e.line}: {e.message}</li>)}</ul>}
       <button type="button" className="primary" disabled={parsed.questions.length===0} onClick={()=>{onAdd(parsed.questions);setText('');setParsed(null)}}>Add {parsed.questions.length} question{parsed.questions.length===1?'':'s'}</button></div>}
   </details>;
+}
+
+/** Files and links students get with the assignment. They are saved at once on the draft; they reach students when it is assigned. */
+function AttachmentsCard({base,items,onChanged,locked}:{base:string;items:Attachment[];onChanged:()=>void;locked:boolean}){
+  const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+  async function run(work:()=>Promise<unknown>){setError('');setBusy(true);try{await work();onChanged()}catch(e){setError(errorText(e))}finally{setBusy(false)}}
+  const addFile=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const form=e.currentTarget;const data=new FormData(form);void run(async()=>{await upload(`${base}/draft/attachments`,data);form.reset()})};
+  const addLink=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const form=e.currentTarget;const f=new FormData(form);void run(async()=>{await post(`${base}/draft/links`,{title:f.get('title'),url:f.get('url')});form.reset()})};
+  return <section className="panel" aria-labelledby="attach-h"><h3 id="attach-h">Attachments</h3>
+    {items.length===0?<p className="muted">Nothing attached. Add a reading, a worksheet or a link students will need.</p>
+      :<ul className="rows">{items.map(x=><li key={x.id}><span className="grow"><strong>{x.kind==='file'?'📎':'🔗'} {x.title}</strong><span className="muted">{x.kind==='file'?x.file?.name:x.url}</span></span>
+        <button type="button" disabled={busy||locked} onClick={()=>void run(()=>send('DELETE',`${base}/draft/attachments/${x.id}`))}>Remove<span className="sr-only"> {x.title}</span></button></li>)}</ul>}
+    <details className="more attach-add"><summary>Add a file</summary>
+      <form onSubmit={addFile}><label>File (PDF, Word, PowerPoint, Excel, PNG or JPEG, up to 20 MB)<input name="file" type="file" required accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg"/></label>
+        <label>Name shown to students (optional)<input name="title" maxLength={200}/></label><button disabled={busy}>Upload</button></form></details>
+    <details className="more attach-add"><summary>Add a link</summary>
+      <form onSubmit={addLink}><label>Link title<input name="title" maxLength={200}/></label><label>Web address<input name="url" type="url" required placeholder="https://" maxLength={2000}/></label><button disabled={busy}>Add link</button></form></details>
+    {error&&<p role="alert" className="error">{error}</p>}</section>;
 }
 
 function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessment:Assessment;refetch:()=>void}){
@@ -193,7 +211,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
       <button type="button" className="icon-btn" aria-label={`Close and go back to Classwork`} onClick={leave}><span aria-hidden="true">×</span></button>
       <span className="class-dot compose-icon" style={{background:'var(--action)',color:'var(--action-text)'}} aria-hidden="true">{quiz?'?':assessment.kind==='activity'?'✎':'▤'}</span>
       <h1>{KIND_LABEL[assessment.kind]}</h1>
-      <span className="compose-actions"><SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/>{manage}{assignMenu}</span>
+      <span className="compose-actions"><SaveIndicator status={auto.status} message={auto.message} storageFailed={auto.storageFailed} onRetry={auto.retry}/>{manage}{blocked?assignButton:assignMenu}</span>
     </header>
     <p className="muted">{assessment.published?`Students see version ${assessment.published.version} until you ${assignLabel.toLowerCase()}.`:'Not visible to students or the gradebook until you assign it. Your changes are saved as a draft as you go.'}</p>
     <DraftNotices auto={auto} reload={serverDraft} onError={setMessage}/>
@@ -204,6 +222,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
         <section className="panel">
           <label>Title<input value={v.title} maxLength={200} placeholder="Title" autoFocus={/^Untitled /.test(v.title)} onFocus={e=>{if(/^Untitled /.test(e.target.value))e.target.select()}} onChange={e=>set({title:e.target.value})}/></label>
           <label>Instructions for students (optional)<textarea value={v.instructions} maxLength={10000} onChange={e=>set({instructions:e.target.value})}/></label></section>
+        <AttachmentsCard base={base} items={draft.attachments??[]} onChanged={refetch} locked={false}/>
         {quiz&&<>
           {locked&&<p className="warn" role="status">Students have started this quiz, so questions and answer keys are locked.</p>}
           <QuestionList questions={v.questions} locked={locked} onChange={q=>set({questions:q})}/>

@@ -69,6 +69,25 @@ def apply_score(db, actor, offering, assessment, student_id, data, submission_id
     return row
 
 
+def set_excused(db, actor, offering, assessment, student_id, excused):
+    """Waive (or restore) one assessment for one student. An excused item is left out of that student's grade, like
+    an excused attendance day; the score and feedback are kept. Published grades are flagged for review."""
+    rev = revision(db, assessment.id, "published")
+    if not rev:
+        fail(409, "not_published", "Publish the assessment before excusing students.")
+    if student_id not in {a.id for _, a in targeted_students(db, offering, assessment)}:
+        fail(422, "student_invalid", "Choose a currently enrolled student this assessment applies to.")
+    row = score_row(db, assessment.id, student_id, create=True)
+    if row.excused != excused:
+        row.excused = excused
+        row.revision += 1
+        audit(db, actor, "score.excused" if excused else "score.unexcused", "assessment", assessment.id,
+              {"student_id": str(student_id)})
+        flag_graded_change(db, offering.id, rev, f"{rev.title}: {'excused' if excused else 'no longer excused'}.", [student_id])
+    db.commit()
+    return row
+
+
 def set_score(db, actor, offering, assessment, student_id, data, submission_id=None):
     row = apply_score(db, actor, offering, assessment, student_id, data, submission_id)
     db.commit()

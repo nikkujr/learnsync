@@ -20,8 +20,8 @@ export function YourWorkPage(){
   if(!work.data||!results.data)return <p>Loading…</p>;
   const now=Date.now();
   const past=(w:LearnItem)=>!!w.deadline&&Date.parse(w.deadline)<now;
-  const kind=(w:LearnItem)=>w.bucket==='closed'||((w.bucket==='todo'||w.bucket==='again')&&past(w))?'missing':w.result?'returned':w.bucket==='awaiting'||w.bucket==='done'?'turned':'assigned';
-  const label:Record<string,string>={missing:'Missing',returned:'Returned',turned:'Turned in',assigned:'Assigned'};
+  const kind=(w:LearnItem)=>w.excused?'excused':w.bucket==='closed'||((w.bucket==='todo'||w.bucket==='again')&&past(w))?'missing':w.result?'returned':w.bucket==='awaiting'||w.bucket==='done'?'turned':'assigned';
+  const label:Record<string,string>={excused:'Excused',missing:'Missing',returned:'Returned',turned:'Turned in',assigned:'Assigned'};
   const rows=work.data;
   const match=(w:LearnItem)=>filter==='all'||(filter==='returned'?kind(w)==='returned':filter==='assigned'?kind(w)==='assigned':kind(w)==='missing');
   const count=(f:Filter)=>rows.filter(w=>f==='all'||(f==='returned'?kind(w)==='returned':f==='assigned'?kind(w)==='assigned':kind(w)==='missing')).length;

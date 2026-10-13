@@ -91,16 +91,14 @@ try{
 
   // ---------- C. gradebook: edit a score, reach the publish control ----------
   await tp.goto(`/faculty/offerings/${O}/gradebook`);await tp.getByRole('heading',{name:'Gradebook'}).waitFor();await tp.waitForLoadState('networkidle');
-  await tabTo(tp,named(/^Edit scores$/,'button'),'Edit scores');await press(tp,'Enter');
-  await tp.getByRole('button',{name:/^Save scores|^Save \d+ changed/}).waitFor();
-  check('Edit scores turns the cells into inputs and offers one Save',(await tp.locator('input.score-input').count())>0);
+  check('the grid has score boxes straight away, with no Edit scores step',(await tp.locator('input.score-input').count())>0&&(await tp.getByRole('button',{name:'Edit scores'}).count())===0);
   await tabTo(tp,d=>d.tag==='input'&&/score for/.test(d.name),'a score input');
-  check('a score input is reachable by keyboard and labelled with the assessment and student',/, score for /.test((await describe(tp)).name));
+  check('a score box is reachable by keyboard and labelled with the assessment and student',/, score for /.test((await describe(tp)).name));
+  const before=await tp.evaluate(()=>document.activeElement?.value);
   await tp.keyboard.type('1');
-  await tp.getByRole('button',{name:/^Save 1 changed score/}).waitFor();
-  check('typing a score enables the single Save and counts the change',true);
-  await tabTo(tp,named(/^Cancel$/,'button'),'Cancel');await press(tp,'Enter');
-  check('Cancel leaves edit mode without saving anything',(await tp.locator('input.score-input').count())===0);
+  check('typing changes only the box (nothing is saved until Enter or leaving it)',(await tp.evaluate(()=>document.activeElement?.value))!==before);
+  await press(tp,'Escape');
+  check('Esc undoes it without saving anything',(await tp.evaluate(()=>document.activeElement?.value))===before);
   // the next period to publish is shown; when everything is already published the periods sit under "All periods"
   if(!await tp.getByRole('button',{name:/^Publish (Midterm|Finals|Course)/}).first().isVisible().catch(()=>false)){await tabTo(tp,d=>d.tag==='summary'&&/All periods/.test(d.name),'All periods');await press(tp,'Enter')}
   const canPublish=await tp.getByRole('button',{name:/^Publish (Midterm|Finals)/}).evaluateAll(bs=>bs.some(b=>!b.disabled));      // needs a period with graded work ready to publish

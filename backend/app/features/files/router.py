@@ -44,6 +44,28 @@ def may_download(db, file, actor):
             return row.student_id == actor.id          # their own work, even after withdrawal
         offering = db.get(Offering, db.get(Assessment, row.assessment_id).offering_id)
         return actor.role == "faculty" and offering.faculty_id == actor.id
+    if file.purpose == "assessment_attachment":
+        # judged by what the student could actually see: a published, current, targeted, already-open assignment
+        from app.features.assessments.definitions import section_ids_of as assessment_sections
+        from app.features.assessments.models import AssessmentAttachment, AssessmentRevision
+        rows = db.execute(select(AssessmentRevision, Assessment)
+                          .join(AssessmentAttachment, AssessmentAttachment.revision_id == AssessmentRevision.id)
+                          .join(Assessment, Assessment.id == AssessmentRevision.assessment_id)
+                          .where(AssessmentAttachment.file_id == file.id)).all()
+        if not rows:
+            return False
+        offering = db.get(Offering, rows[0][1].offering_id)
+        if actor.role == "faculty":
+            return offering.faculty_id == actor.id
+        if actor.role == "student":
+            from app.features.accounts.models import now
+            enrollment = db.scalar(select(Enrollment).where(
+                Enrollment.offering_id == offering.id, Enrollment.student_id == actor.id, Enrollment.status == "enrolled"))
+            return bool(enrollment and any(
+                revision.state == "published" and not assessment.archived
+                and not (revision.available_from and revision.available_from > now())
+                and targeted(assessment_sections(db, assessment.id), enrollment) for revision, assessment in rows))
+        return False
     if file.purpose == "material":
         # A file can be referenced by several revisions of an item (drafts and superseded
         # versions share it), so judge the item by what students could actually see.
@@ -74,7 +96,7 @@ PREVIEW_TYPES = {"application/pdf": b"%PDF", "image/png": bytes([0x89, 0x50, 0x4
 def preview(file_id: UUID, actor=Depends(current_account), db: Session = Depends(get_db)):
     file = db.get(StoredFile, file_id)
     magic = PREVIEW_TYPES.get(file.content_type) if file else None
-    if not file or file.purpose not in {"material", "submission"} or magic is None or not may_download(db, file, actor)             or not path_of(file).is_file():
+    if not file or file.purpose not in {"material", "submission", "assessment_attachment"} or magic is None or not may_download(db, file, actor)             or not path_of(file).is_file():
         fail(404, "not_found", "No preview is available for this file.")
     with path_of(file).open("rb") as fh:
         if not fh.read(len(magic)).startswith(magic):

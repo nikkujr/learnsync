@@ -56,6 +56,15 @@ class AnswersSave(BaseModel):
     answers: dict[str, Any] = Field(default_factory=dict)
 
 
+class LinkInput(BaseModel):
+    title: str = Field(default="", max_length=200)
+    url: str = Field(min_length=8, max_length=2000)
+
+
+class ExcuseInput(BaseModel):
+    excused: bool
+
+
 class MarkDone(BaseModel):
     note: str = Field(default="", max_length=2000)
 

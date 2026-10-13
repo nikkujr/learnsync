@@ -274,3 +274,21 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .panel>.type-tabs{gap:6px}
 .panel>.type-tabs button{padding:4px 10px;font-size:.9rem}
 .panel>.type-tabs .tab-count{margin-left:4px}
+/* split Assign button: two halves of one pill (higher specificity than the generic .button.primary pill) */
+.split{display:inline-flex;align-items:stretch;border-radius:999px;box-shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15)}
+.split>.primary,.split .split-more.button.primary{box-shadow:none;margin:0}
+.split>button.primary{border-radius:999px 0 0 999px;padding:9px 20px 9px 24px}
+.split .split-more.button.primary{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:0 14px 0 12px;border-radius:0 999px 999px 0;border-left:1px solid rgba(255,255,255,.5);font-size:1rem;line-height:1}
+.split>details.dropdown{display:flex}
+.split .split-more.button.primary:hover,.split>button.primary:hover{filter:brightness(1.08)}
+/* topic heading shortcuts: the other kinds of work in this topic */
+.topic-chips{display:inline-flex;flex-wrap:wrap;gap:4px 8px;margin-left:auto}
+.topic-chip{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 12px;border-radius:999px;background:var(--surface-alt);color:var(--text);font-size:.85rem;text-decoration:none}
+.topic-chip:hover{background:var(--accent-soft);color:var(--accent-ink)}
+.tree.d0>header{flex-wrap:wrap}
+/* grid cells read like plain text until you point at or focus them, like Classroom */
+.gradebook .score-input{min-width:84px;border-color:transparent;background:transparent}
+.gradebook .score-input:hover{border-color:var(--border)}
+.gradebook .score-input:focus{border-color:var(--action);background:var(--surface)}
+.gradebook .score-input[aria-invalid=true]{border-color:var(--danger)}
+.gradebook .cell>span:first-child{display:inline-block;padding-left:11px}

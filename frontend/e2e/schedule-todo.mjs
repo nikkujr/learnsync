@@ -91,11 +91,16 @@ try{
   await rp.getByLabel('Students turn in').selectOption('none');
   await rp.getByLabel('Grading category').selectOption({label:'Activities (50%)'});await rp.getByLabel('Grading period').selectOption({label:'Midterm'});
   await rp.getByLabel('Points',{exact:true}).fill('10');await rp.getByLabel('Due').fill('2099-02-10T17:00');await rp.waitForTimeout(1800);
+  await rp.locator('details.attach-add summary',{hasText:'Add a link'}).click();
+  await rp.getByLabel('Link title').fill('Syllabus reading');await rp.getByLabel('Web address').fill('https://example.com/reading');await rp.getByRole('button',{name:'Add link'}).click();
+  await rp.getByText('Syllabus reading').first().waitFor();
+  check('the teacher can attach a link to the assignment on the create page',await rp.locator('li',{hasText:'Syllabus reading'}).count()===1);
   await rp.getByRole('button',{name:'Assign',exact:true}).click();await rp.waitForURL(/\/classwork(\?type=\w+)?$/);
   check('the activity is published as one that needs no file',(await call(rp,'GET',`/teach/offerings/${O}/assessments/${rid}`)).data.published?.requires_file===false);
   await S1.goto(`/student/offerings/${O}/classwork?type=activity`);await S1.waitForLoadState('networkidle');
   await S1.getByRole('link',{name:'Reflection note',exact:true}).click();await S1.waitForLoadState('networkidle');
   await S1.getByRole('button',{name:'Mark as done'}).waitFor();
+  check('the student sees the attached link under Materials, opening in a new tab',(await S1.locator('ul[aria-label="Materials"] a[target=_blank]').getAttribute('href'))==='https://example.com/reading');
   check('the work page offers Mark as done and no file upload',await S1.getByRole('button',{name:'Mark as done'}).count()===1&&await S1.locator('input[type=file]').count()===0);
   await S1.goto('/student');await S1.waitForLoadState('networkidle');await S1.getByRole('heading',{name:'Due soon'}).waitFor({timeout:8000}).catch(()=>{});      // while the work is still open
   check('the student Home has a Due soon strip above the class cards',await S1.getByRole('heading',{name:'Due soon'}).count()===1);
@@ -134,6 +139,12 @@ try{
   check('axe finds no violations on Your work',(await axe(S1)).length===0);
   await rp.goto(`/faculty/offerings/${O}/assessments/${rid}`);await rp.waitForLoadState('networkidle');
   check('axe finds no violations on the assignment page',(await axe(rp)).length===0);
+  // ---- G: excusing (last, because an excused item no longer counts as returned)
+  await rp.goto(`/faculty/offerings/${O}/assessments/${rid}/scores`);await rp.waitForLoadState('networkidle');await rp.locator('.grade-student',{hasText:'Demo student 1'}).click();
+  await rp.getByRole('button',{name:'Excuse',exact:true}).click();await rp.getByText('is excused from this').first().waitFor();
+  check('the teacher can excuse a student from the work (kept out of their grade)',(await call(rp,'GET',`/teach/offerings/${O}/assessments/${rid}/scores`)).data.find(r=>r.student==='Demo student 1').excused===true);
+  await S1.goto(`/student/offerings/${O}/work/${rid}`);await S1.waitForLoadState('networkidle');
+  check('the excused student is told so and has nothing to do',(await S1.locator('aside[aria-label="Your work"]').innerText()).includes('Excused')&&await S1.getByRole('button',{name:'Mark as done'}).count()===0);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

@@ -20,6 +20,7 @@ from app.features.teaching.models import (
     SyllabusRevision,
 )
 
+from . import attachments
 from .definitions import section_ids_of
 from .models import Assessment, AssessmentRevision, AssessmentSection, QuizQuestion
 
@@ -186,6 +187,7 @@ def duplicate(db, actor, offering, assessment):
         ai_language=rev.ai_language)
     db.add(draft)
     db.flush()
+    attachments.copy(db, rev.id, draft.id)
     for q in db.scalars(select(QuizQuestion).where(QuizQuestion.revision_id == rev.id).order_by(QuizQuestion.position)):
         db.add(QuizQuestion(revision_id=draft.id, key=q.key, position=q.position, type=q.type, prompt=q.prompt,
                             choices=q.choices, correct=q.correct, explanation=q.explanation, points=q.points,

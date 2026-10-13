@@ -26,7 +26,8 @@ export function AssessmentHub(){
     </header>
     <p className="muted">{KIND_LABEL[a.kind]} · {rev.deadline?`Due ${when(rev.deadline)}`:'No due date'} · {rev.include_in_grade?`${fmt(rev.max_points)} points`:'Ungraded'}</p>
     <div className="compose-grid">
-      <div className="compose-main"><section className="panel"><h2>Instructions</h2>{rev.instructions?<p className="pre">{rev.instructions}</p>:<p className="muted">No instructions.</p>}</section></div>
+      <div className="compose-main"><section className="panel"><h2>Instructions</h2>{rev.instructions?<p className="pre">{rev.instructions}</p>:<p className="muted">No instructions.</p>}</section>
+        {rev.attachments&&rev.attachments.length>0&&<section className="panel"><h2>Attachments</h2><ul className="rows">{rev.attachments.map(x=><li key={x.id}>{x.kind==='file'&&x.file?<a href={`/api/files/${x.file.id}/download`}>{x.title}</a>:<a href={x.url??'#'} target="_blank" rel="noopener noreferrer">{x.title}</a>}<span className="muted">{x.kind==='file'?x.file?.name:x.url}</span></li>)}</ul></section>}</div>
       <aside className="compose-side panel" aria-label="Student work"><h2>Student work</h2>
         {counts?<div className="hub-stats">{stat(counts.turned_in,'Turned in','turned_in')}{stat(counts.assigned,'Assigned','assigned')}{stat(counts.graded,'Graded','graded')}</div>:<p className="muted">Counts are not available.</p>}
         {counts&&counts.to_return>0&&<p className="muted">{counts.to_return} scored but not returned yet.</p>}

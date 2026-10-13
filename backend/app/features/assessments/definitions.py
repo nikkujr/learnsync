@@ -9,6 +9,7 @@ from app.features.accounts.commands import audit
 from app.features.accounts.models import now
 from app.features.teaching.items import check_sections, outline_ids
 
+from . import attachments
 from .models import (
     ActivitySubmission,
     Assessment,
@@ -69,7 +70,7 @@ def rev_view(db, rev):
             "score_rule": rev.score_rule, "include_in_grade": rev.include_in_grade,
             "anchor_node_id": rev.anchor_node_id, "updated_at": rev.updated_at,
             "published_at": rev.published_at, "ai_generated": rev.ai_generated,
-            "ai_language": rev.ai_language,
+            "ai_language": rev.ai_language, "attachments": attachments.listing(db, rev),
             "reviewed": rev.reviewed_counter is not None
             and rev.reviewed_counter == rev.draft_counter,
             "questions": [question_view(q) for q in questions_of(db, rev.id)]}
@@ -149,6 +150,7 @@ def start_draft(db, actor, assessment):
         db.add(QuizQuestion(revision_id=draft.id, key=q.key, position=q.position, type=q.type,
                             prompt=q.prompt, choices=q.choices, correct=q.correct,
                             explanation=q.explanation, points=q.points, source=q.source))
+    attachments.copy(db, base.id, draft.id)
     db.commit()
     return draft
 

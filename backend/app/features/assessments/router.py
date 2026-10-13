@@ -9,6 +9,7 @@ from app.features.teaching.schemas import Counter
 from app.security import require_role
 
 from . import (
+    attachments,
     attempts,
     attendance,
     definitions,
@@ -31,7 +32,9 @@ from .schemas import (
     AttendanceInput,
     BatchScores,
     Correction,
+    ExcuseInput,
     GradePublishInput,
+    LinkInput,
     MarkDone,
     ParseInput,
     PermissionInput,
@@ -208,6 +211,35 @@ def list_scores(offering_id: UUID, assessment_id: UUID, actor=Depends(faculty),
                 db: Session = Depends(get_db)):
     offering, a = assessment_of(db, offering_id, assessment_id, actor, write=False)
     return submissions.faculty_rows(db, offering, a, scores.targeted_students(db, offering, a))
+
+
+@router.post(T + "/assessments/{assessment_id}/draft/attachments", status_code=201)
+def attach_file(offering_id: UUID, assessment_id: UUID, file: UploadFile = File(...), title: str = Form(""),
+                actor=Depends(faculty), db: Session = Depends(get_db)):
+    _, a = assessment_of(db, offering_id, assessment_id, actor)
+    return attachments.add_file(db, actor, a, file, title)
+
+
+@router.post(T + "/assessments/{assessment_id}/draft/links", status_code=201)
+def attach_link(offering_id: UUID, assessment_id: UUID, data: LinkInput, actor=Depends(faculty),
+                db: Session = Depends(get_db)):
+    _, a = assessment_of(db, offering_id, assessment_id, actor)
+    return attachments.add_link(db, actor, a, data.title, data.url)
+
+
+@router.delete(T + "/assessments/{assessment_id}/draft/attachments/{attachment_id}")
+def remove_attachment(offering_id: UUID, assessment_id: UUID, attachment_id: UUID, actor=Depends(faculty),
+                      db: Session = Depends(get_db)):
+    _, a = assessment_of(db, offering_id, assessment_id, actor)
+    return attachments.remove(db, actor, a, attachment_id)
+
+
+@router.put(T + "/assessments/{assessment_id}/excuse/{student_id}")
+def excuse_student(offering_id: UUID, assessment_id: UUID, student_id: UUID, data: ExcuseInput,
+                   actor=Depends(faculty), db: Session = Depends(get_db)):
+    offering, a = assessment_of(db, offering_id, assessment_id, actor)
+    row = scores.set_excused(db, actor, offering, a, student_id, data.excused)
+    return {"excused": row.excused, "revision": row.revision}
 
 
 @router.put(T + "/assessments/{assessment_id}/scores/{student_id}")

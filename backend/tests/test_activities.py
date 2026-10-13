@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from helpers import PDF, Api, make_account
 from sqlalchemy import select
-from test_assessments import a, create, iso, la, make_manual, make_quiz
+from test_assessments import a, create, iso, la, make_manual, make_quiz, publish
 
 from app.features.assessments.models import AssessmentRevision, ResultPublication
 from app.main import app
@@ -255,13 +255,13 @@ def counts_of(c, aid):
 def test_the_teacher_list_counts_turned_in_assigned_and_graded(graded):
     aid = make_manual(graded, "activity", "Counted", points="10", category_key="activity", deadline=iso(24))
     fac, st1, s1 = graded["fac"], graded["st1"], graded["students"][0]
-    assert counts_of(graded, aid) == {"total": 2, "graded": 0, "turned_in": 0, "assigned": 2, "to_return": 0}
+    assert counts_of(graded, aid) == {"total": 2, "graded": 0, "turned_in": 0, "assigned": 2, "to_return": 0, "excused": 0}
     assert submit_pdf(st1, graded, aid).status_code == 201
     assert counts_of(graded, aid)["turned_in"] == 1 and counts_of(graded, aid)["assigned"] == 1
     assert score(graded, aid, s1, 8).status_code == 200
     assert counts_of(graded, aid)["to_return"] == 1                                  # scored but not returned yet
     assert fac.post(a(graded, f"/{aid}/release"), {"student_ids": None}).status_code == 200
-    assert counts_of(graded, aid) == {"total": 2, "graded": 1, "turned_in": 0, "assigned": 1, "to_return": 0}
+    assert counts_of(graded, aid) == {"total": 2, "graded": 1, "turned_in": 0, "assigned": 1, "to_return": 0, "excused": 0}
     draft_only = create(graded, "activity", "Not published")["id"]
     assert "counts" not in next(x for x in fac.get(a(graded, "")).json() if x["id"] == draft_only)
 
@@ -285,3 +285,35 @@ def test_the_student_todo_lists_missing_and_done_work(db, graded):
 def test_new_assessments_start_at_100_points_except_online_quizzes(graded):
     assert create(graded, "activity", "Default points")["draft"]["max_points"] == 100
     assert create(graded, "online_quiz", "Quiz points")["draft"]["max_points"] == 0
+
+
+# ---------------- files and links attached to an assignment ----------------
+
+def test_an_assignment_carries_files_and_links_that_follow_its_publication(db, graded):
+    fac, st1 = graded["fac"], graded["st1"]
+    aid = create(graded, "activity", "With materials")["id"]
+    up = fac.upload(a(graded, f"/{aid}/draft/attachments"), "guide.pdf", PDF, {"title": "Reading guide"})
+    assert up.status_code == 201 and up.json()[0]["title"] == "Reading guide" and up.json()[0]["file"]["name"] == "guide.pdf"
+    file_id = up.json()[0]["file"]["id"]
+    link = fac.post(a(graded, f"/{aid}/draft/links"), {"title": "Reference", "url": "https://example.com/x"})
+    assert link.status_code == 201 and [x["kind"] for x in link.json()] == ["file", "link"]
+    assert fac.post(a(graded, f"/{aid}/draft/links"), {"title": "Bad", "url": "ftp://nope.example"}).json()["error"]["code"] == "link_invalid"
+    assert fac.upload(a(graded, f"/{aid}/draft/attachments"), "run.exe", b"MZ", {}).status_code == 422
+    assert st1.get(f"/api/files/{file_id}/download").status_code == 404                # a draft's files are not for students
+    assert publish(graded, aid, title="With materials", category_key="activity", max_points="10").status_code == 200
+    item = next(i for i in st1.get(la(graded, "/assessments")).json() if i["id"] == aid)
+    assert [x["title"] for x in item["attachments"]] == ["Reading guide", "Reference"]
+    url = f"/api/files/{file_id}/download"
+    assert st1.get(url).status_code == 200 and fac.get(url).status_code == 200
+    assert graded["admin"].get(url).status_code == 404 and TestClient(app).get(url).status_code == 401
+    other = Api(make_account(db, "attach-other@example.com", "faculty").email)
+    assert other.get(url).status_code == 404
+    assert other.post(a(graded, f"/{aid}/draft/links"), {"url": "https://example.com/y"}).status_code in (403, 404)
+    # a new draft starts from the published attachments; removing one affects the draft only
+    assert fac.post(a(graded, f"/{aid}/draft"), {}).status_code in (200, 201)
+    draft = fac.get(a(graded, f"/{aid}")).json()["draft"]
+    assert len(draft["attachments"]) == 2
+    left = fac.delete(a(graded, f"/{aid}/draft/attachments/{draft['attachments'][1]['id']}"))
+    assert left.status_code == 200 and len(left.json()) == 1
+    assert len(fac.get(a(graded, f"/{aid}")).json()["published"]["attachments"]) == 2
+    assert st1.get(url).status_code == 200                                               # students still have what they were given

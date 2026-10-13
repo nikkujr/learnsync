@@ -68,3 +68,7 @@ No new endpoint: `PUT /api/teach/offerings/{id}/attendance` has always been a PA
 - `GET /api/dashboard/student/todo` adds `missing` (closed bucket: past due, nothing handed in, late work not accepted) and `done` (returned or finished work, with `result`).
 - Gradebook columns carry `deadline`; activity cells carry `turned_in`.
 - New assessments other than online quizzes start at 100 points.
+
+## Excuse and attachments (2026-10-13)
+- `assessment_score.excused` (migration `b3d9e1f27a44`). `PUT /api/teach/offerings/{id}/assessments/{aid}/excuse/{student_id}` body `{excused}`; excused items are skipped in `grading.assessment_category` (left out of earned and possible), skipped by `results.release_one`, flagged for review through `flag_graded_change`, and shown to the student as `excused` (bucket `done`). Gradebook cells and score rows carry `excused`; status counts carry `excused`.
+- `assessment_attachment` (migration `c5e1f3a07d92`): `kind` file or link, per revision. `POST .../assessments/{aid}/draft/attachments` (multipart: file, title), `POST .../draft/links` (JSON), `DELETE .../draft/attachments/{id}`; revision views and the student item view carry `attachments`. Files use purpose `assessment_attachment`; `GET /api/files/{id}/download` allows the owning teacher, or an enrolled, targeted student of a published, unarchived, already-open version.

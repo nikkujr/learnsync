@@ -18,7 +18,7 @@ def latest_release(db, assessment_id, student_id):
 
 def release_one(db, assessment, rev, score_row, actor=None):
     """Release the current working score unless the student already sees exactly this."""
-    if score_row is None or score_row.score is None:
+    if score_row is None or score_row.score is None or score_row.excused:
         return None
     last = latest_release(db, assessment.id, score_row.student_id)
     if last and last.score == score_row.score and last.feedback == score_row.feedback \

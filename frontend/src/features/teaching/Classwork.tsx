@@ -109,7 +109,7 @@ export function FacultyClasswork(){
     const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];
     const items=n.rows.filter(r=>r.type==='item');
     return <section key={n.id} className={`tree d${Math.min(depth,2)}`} aria-labelledby={`c-${n.id}`}>
-      <header><Heading id={`c-${n.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(n.id)} onClick={()=>fold(n.id)}>{n.title}</button></Heading><span className="count">{total(n)}</span>
+      <header><Heading id={`c-${n.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(n.id)} onClick={()=>fold(n.id)}>{n.title}</button></Heading><span className="count">{total(n)}</span>{depth===0&&chips(n.id)}
         {items.length>1&&!closed&&!stranded&&<button type="button" className="linklike" aria-pressed={reorder===n.id} onClick={()=>setReorder(reorder===n.id?null:n.id)}>{reorder===n.id?'Done reordering':'Reorder'}</button>}</header>
       {reorder===n.id&&<p className="muted">Drag a row onto another to move it, or use the arrow buttons.</p>}
       {!folded.has(n.id)&&n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=>{const drag=reorder===n.id&&r.type==='item'&&!closed;
@@ -123,6 +123,7 @@ export function FacultyClasswork(){
           <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>})}</ul>}
       {!folded.has(n.id)&&n.kids.map(k=>branch(k,depth+1))}</section>};
   const label=FACULTY_CATS.find(c=>c[0]===cat)?.[1]??'classwork';
+  const chips=topicChips(catCounts(buildTree(outline,rows.filter(r=>archived||!r.archived))),cat,FACULTY_CATS);
   return <>
     <div className="type-row"><ClassworkTypes base={base} cats={FACULTY_CATS} current={cat} counts={{all:rows.filter(r=>archived||!r.archived).length,...Object.fromEntries(FACULTY_CATS.map(([k])=>[k,rows.filter(r=>r.cat===k&&(archived||!r.archived)).length]))}}/>
       <details className="dropdown" ref={menu}><summary className={`button primary${closed?' disabled':''}`} aria-disabled={closed} onClick={e=>{if(closed)e.preventDefault()}}>+ Create</summary>
@@ -163,6 +164,19 @@ function TopicNav<T>({tree}:{tree:TNode<T>[]}){
   return <nav className="topic-nav" aria-label="Topics"><Link to={to(null)} replace className={!known?'active':undefined} aria-current={!known?'page':undefined}><span className="t">All topics</span></Link>
     {tree.map(n=><Link key={n.id} to={to(n.id)} replace title={n.title} className={n.id===current?'active':undefined} aria-current={n.id===current?'page':undefined}><span className="t">{n.title}</span><span className="tab-count">{total(n)}</span></Link>)}</nav>;
 }
+/** How many of each kind sit under each top-level topic, whatever the current type filter: the numbers behind the shortcuts. */
+const rowsUnder=<T,>(n:TNode<T>):T[]=>[...n.rows,...n.kids.flatMap(rowsUnder)];
+function catCounts<T extends {cat:string}>(tree:TNode<T>[]){
+  return Object.fromEntries(tree.map(n=>{const c:Record<string,number>={};for(const r of rowsUnder(n))c[r.cat]=(c[r.cat]??0)+1;return [n.id,c]}));
+}
+/** Shortcuts on a topic heading: the other kinds of work in that topic, each opening that kind filtered to the topic. */
+function topicChips(counts:Record<string,Record<string,number>>,current:string,cats:[Cat,string][]){
+  return (id:string)=>{
+    const c=counts[id]??{};const shown=cats.filter(([k])=>k!==current&&(c[k]??0)>0);
+    if(current==='all'||shown.length===0)return null;
+    return <span className="topic-chips" aria-label="Other work in this topic">{shown.map(([k,l])=><Link key={k} className="topic-chip" to={`?type=${k}&topic=${id}`}>{l} <strong>{c[k]}</strong></Link>)}</span>;
+  };
+}
 const idsOf=<T,>(tree:TNode<T>[]):string[]=>tree.flatMap(n=>[n.id,...idsOf(n.kids)]);
 /** Which topics are folded, and the two buttons that fold or unfold all of them. */
 function useFolds(){
@@ -190,15 +204,15 @@ function buildTree<T extends {anchor:string|null}>(outline:Outline|undefined,row
 }
 const rank=(r:SRow)=>r.todo?0:r.done?2:1;      // inside one topic: what needs you first, then the rest, then what is finished
 
-function Branch({node,depth,here,folded,fold,bare=false}:{node:TNode;depth:number;here:{from:string;label:string};folded:Set<string>;fold:(id:string)=>void;bare?:boolean}){
+function Branch({node,depth,here,folded,fold,chips,bare=false}:{node:TNode;depth:number;here:{from:string;label:string};folded:Set<string>;fold:(id:string)=>void;chips:(id:string)=>React.ReactNode;bare?:boolean}){
   const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];
   return <section className={`tree d${Math.min(depth,2)}`} aria-labelledby={`t-${node.id}`}>
-    {bare?<h3 id={`t-${node.id}`} className="sr-only">{node.title}</h3>:<header><Heading id={`t-${node.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(node.id)} onClick={()=>fold(node.id)}>{node.title}</button></Heading><span className="count">{total(node)}</span></header>}
+    {bare?<h3 id={`t-${node.id}`} className="sr-only">{node.title}</h3>:<header><Heading id={`t-${node.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(node.id)} onClick={()=>fold(node.id)}>{node.title}</button></Heading><span className="count">{total(node)}</span>{depth===0&&chips(node.id)}</header>}
     {!folded.has(node.id)&&node.rows.length>0&&<ul className="seq compact">{[...node.rows].sort((a,b)=>rank(a)-rank(b)).map(r=><li key={r.key} data-cat={r.cat} className={r.chips.some(c=>c.cls==='next')?'next':undefined}>
       <span className="grow"><Link state={here} to={r.to}>{r.title}</Link>{(r.detail||r.result)&&<span className="muted">{r.detail}{r.detail&&r.result?' · ':''}{r.result&&<strong>{r.result}</strong>}</span>}</span>
       {r.chips.map(c=><span key={c.text} className={`badge ${c.cls??''}`}>{c.text}</span>)}
       {r.kind==='item'&&r.todo&&<Link state={here} className="start" to={r.to} title="Open this" aria-hidden="true" tabIndex={-1}>▶</Link>}</li>)}</ul>}
-    {!folded.has(node.id)&&node.kids.map(k=><Branch key={k.id} node={k} depth={depth+1} here={here} folded={folded} fold={fold}/>)}
+    {!folded.has(node.id)&&node.kids.map(k=><Branch key={k.id} node={k} depth={depth+1} here={here} folded={folded} fold={fold} chips={chips}/>)}
   </section>;
 }
 
@@ -232,6 +246,7 @@ export function StudentClasswork(){
   const outline=syllabus.data?.published?.outline;
   const shownRows=rows.filter(want);
   const tree=buildTree(outline,shownRows);
+  const chips=topicChips(catCounts(buildTree(outline,rows)),cat,CATS);
   const count=(k:Filter)=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(k==='all'||(k==='todo'?r.todo:r.done))).length;
   return <>
     {rows.length===0?<section className="panel"><h2>Nothing yet</h2><p>Published lessons, files, links, quizzes and activities appear here.</p></section>:<>
@@ -242,6 +257,6 @@ export function StudentClasswork(){
         <div className="segmented" role="group" aria-label="Show">{([['all','Everything'],['todo',cat==='lesson'?'Not completed':'To do'],['done',cat==='lesson'?'Completed':'Done']] as const).map(([k,l])=>
           <button key={k} type="button" className={filter===k?'on':''} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l} <span className="muted">{count(k)}</span></button>)}</div></div>
       {shownRows.length===0?<section className="panel"><h2>{filter==='todo'?'Nothing to do':filter==='done'?'Nothing done yet':'Nothing here yet'}</h2><p className="muted">{filter==='todo'?'You are up to date.':filter==='done'?'Completed lessons and finished work appear here.':'Your teacher has not published any yet.'}</p></section>
-        :tree.length===1&&tree[0].id==='other'?<Branch node={tree[0]} depth={0} here={here} folded={folded} fold={fold} bare/>:<div className="cw-layout"><TopicNav tree={tree}/><div className="cw-main"><FoldBar tree={tree} setFolded={setFolded}/>{inTopic(tree,topic).map(n=><Branch key={n.id} node={n} depth={0} here={here} folded={folded} fold={fold}/>)}</div></div>}</>}
+        :tree.length===1&&tree[0].id==='other'?<Branch node={tree[0]} depth={0} here={here} folded={folded} fold={fold} chips={chips} bare/>:<div className="cw-layout"><TopicNav tree={tree}/><div className="cw-main"><FoldBar tree={tree} setFolded={setFolded}/>{inTopic(tree,topic).map(n=><Branch key={n.id} node={n} depth={0} here={here} folded={folded} fold={fold} chips={chips}/>)}</div></div>}</>}
   </>;
 }

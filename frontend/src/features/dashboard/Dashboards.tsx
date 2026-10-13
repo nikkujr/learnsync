@@ -29,7 +29,7 @@ function Hero({eyebrow,title,detail,action,to,icon}:{eyebrow:string;title:string
 }
 
 // ---------------------------------------------------------------- student
-export interface Work{result?:{score:number;max_points:number}|null;late_allowed?:boolean;offering_id:string;assessment_id:string;kind:string;title:string;subject:string;deadline:string|null;available_from?:string|null;state?:string;attempts_left?:number}
+export interface Work{excused?:boolean;result?:{score:number;max_points:number}|null;late_allowed?:boolean;offering_id:string;assessment_id:string;kind:string;title:string;subject:string;deadline:string|null;available_from?:string|null;state?:string;attempts_left?:number}
 interface StudentHomeData{name:string;subjects:{offering_id:string;code:string;title:string;percent:number|null;done:number;total:number;to_do:number}[];
   week:{days:{label:string;date:string;count:number;today:boolean;future:boolean}[];lessons_today:number;work_today:number};
   next_step:{type:string;title:string;subject:string;link:string}|null;todo:Work[];todo_total:number;awaiting_feedback:Work[];another_attempt:Work[];
@@ -199,7 +199,7 @@ export function StudentTodo(){
       const bucket=(w:Work)=>!w.deadline?'No due date':Date.parse(w.deadline)<=thisWeek?'This week':Date.parse(w.deadline)<=thisWeek+WEEK?'Next week':'Later';
       const due=(w:Work)=>w.state==='not_open'&&w.available_from?`opens ${dateTime(w.available_from)}`:w.deadline?`due ${dateTime(w.deadline)}`:'no deadline';
       const pastNote=(w:Work)=>`was due ${dateTime(w.deadline!)}${w.late_allowed?' · late submission allowed':' · closed'}`;
-      const doneNote=(w:Work)=>d.another_attempt.includes(w)?`${plural(w.attempts_left??0,'attempt')} left, you can try again`:w.result?`returned · ${w.result.score.toFixed(2)} / ${w.result.max_points.toFixed(2)}`:'turned in, awaiting feedback';
+      const doneNote=(w:Work)=>w.excused?'excused, left out of your grade':d.another_attempt.includes(w)?`${plural(w.attempts_left??0,'attempt')} left, you can try again`:w.result?`returned · ${w.result.score.toFixed(2)} / ${w.result.max_points.toFixed(2)}`:'turned in, awaiting feedback';
       const everything=counts.assigned+counts.missing+counts.done===0;
       return <>
         <nav className="tabs" aria-label="To-do sections">{TODO_TABS.map(([k,l])=><Link key={k} to={`?tab=${k}`} replace className={tab===k?'active':undefined} aria-current={tab===k?'page':undefined}>{l}{counts[k]>0&&<span className="tab-count">{counts[k]}</span>}</Link>)}</nav>

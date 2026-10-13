@@ -40,42 +40,37 @@ try{
   const page=await newPage(browser,{state:F});autoConfirm(page);
   await page.goto(`/faculty/offerings/${O}/gradebook`);await page.getByRole('heading',{name:'Gradebook'}).waitFor();await page.waitForLoadState('networkidle');
 
-  // ---- A: read-first
-  check('the gradebook opens read-first: no score inputs',await page.locator('input.score-input').count()===0);
-  const bodyControls=await page.evaluate(()=>[...document.querySelectorAll('main a[href],main button,main input,main select,main textarea,main summary')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&!e.closest('nav.tabs')}).length);
-  check(`the page body has ${bodyControls} controls in read mode (target 25 or fewer)`,bodyControls<=25,String(bodyControls));
-  check('axe finds no violations in read mode',(await axe(page)).length===0);
+  // ---- A: like Classroom, every scoreable cell is a box you can type into
+  const inputs=page.locator('input.score-input');
+  check('every scoreable cell is a score box straight away (no Edit scores step)',await inputs.count()===6&&await page.getByRole('button',{name:'Edit scores'}).count()===0,String(await inputs.count()));
+  check('axe finds no violations on the grid',(await axe(page)).length===0);
 
-  // ---- B: edit six cells, one Save
-  await page.getByRole('button',{name:'Edit scores'}).click();
-  await page.locator('input.score-input').first().waitFor();
-  const inputs=page.locator('input.score-input');const n=await inputs.count();
-  check('Edit scores turns every scoreable cell into an input',n===6,String(n));
-  check('axe finds no violations in edit mode',(await axe(page)).length===0);
+  // ---- B: type, Enter saves the cell and moves down
+  const n=await inputs.count();
   const exams=['44','38.5','50'],papers=['18','15','20'];let e=0,pq=0;   // the paper quiz is out of 20, the exam out of 50
-  for(let i=0;i<n;i++){const label=await inputs.nth(i).getAttribute('aria-label');await inputs.nth(i).fill(label.startsWith('Paper quiz')?papers[pq++]:exams[e++])}
-  await page.getByRole('button',{name:'Save 6 changed scores'}).click();
-  await page.getByText('Saved 6 scores.').first().waitFor();
-  const book=await grades();
+  for(let i=0;i<n;i++){const label=await inputs.nth(i).getAttribute('aria-label');await inputs.nth(i).fill(label.startsWith('Paper quiz')?papers[pq++]:exams[e++]);await inputs.nth(i).press('Enter');await page.waitForTimeout(500)}
+  let book=await grades();
+  for(let tries=0;tries<10&&book.rows.flatMap(r=>Object.values(r.cells)).some(c=>c.score===null);tries++){await page.waitForTimeout(500);book=await grades()}
   const saved=book.rows.flatMap(r=>Object.values(r.cells)).map(c=>Number(c.score)).sort((a,b)=>a-b);
-  check('all six scores were saved by one Save',JSON.stringify(saved)===JSON.stringify([15,18,20,38.5,44,50]),JSON.stringify(saved));
-  check('edit mode closed and the cells show text again',await page.locator('input.score-input').count()===0);
+  check('all six scores were saved as they were typed',JSON.stringify(saved)===JSON.stringify([15,18,20,38.5,44,50]),JSON.stringify(saved));
+  await inputs.nth(0).focus();await page.keyboard.press('Enter');
+  const moved=await page.evaluate(()=>{const a=document.activeElement;return {row:a?.getAttribute('data-row'),col:a?.getAttribute('data-col')}});
+  check('Enter moves to the cell below in the same column',moved.row==='1'&&moved.col===(await inputs.nth(0).getAttribute('data-col')),JSON.stringify(moved));
+  const sp=await newPage(browser,{state:S1});await sp.goto('/student');
+  check('students see nothing yet (scores are working values until returned)',(await call(sp,'GET',`/learn/offerings/${O}/results`)).data.results.length===0);
 
-  // ---- C: a conflict saves nothing and names the cell
-  await page.getByRole('button',{name:'Edit scores'}).click();await page.locator('input.score-input').first().waitFor();
-  const first=page.locator('input.score-input').nth(0),second=page.locator('input.score-input').nth(1);
-  const firstLabel=await first.getAttribute('aria-label');
-  await first.fill('10');await second.fill('11');
+  // ---- C: a colleague's change is reported, never overwritten, and Esc undoes what was typed
+  const first=inputs.nth(0);const firstLabel=await first.getAttribute('aria-label');
   const rowA=book.rows[0];const colFirst=Object.keys(rowA.cells)[0];
+  await first.fill('10');
   await call(teach,'PUT',`/teach/offerings/${O}/assessments/${colFirst}/scores/${rowA.student_id}`,{score:'49',feedback:'',expected_revision:rowA.cells[colFirst].revision}); // someone else saves first
-  await page.getByRole('button',{name:'Save 2 changed scores'}).click();
-  await page.getByText(/nothing was saved/).first().waitFor();
-  check('the conflicting cell is marked and the typed values are kept',await page.locator('input.score-input[aria-invalid="true"]').count()===1&&(await first.inputValue())==='10'&&(await second.inputValue())==='11');
+  await first.press('Enter');
+  await page.locator('input.score-input[aria-invalid="true"]').first().waitFor({timeout:8000});
+  check('the conflicting cell is marked and the typed value is kept',await page.locator('input.score-input[aria-invalid="true"]').count()===1&&(await first.inputValue())==='10');
   const after=await grades();
-  check('the other, valid edit was NOT saved either',Number(Object.values(after.rows[0].cells).map(c=>c.score)[1])!==11&&(await call(teach,'GET',`/teach/offerings/${O}/gradebook`)).status===200);
   check(`${firstLabel?.split(',')[0]} still has the other teacher's value`,Number(after.rows[0].cells[colFirst].score)===49);
-  await page.getByRole('button',{name:'Cancel'}).click();
-  check('Cancel leaves edit mode',await page.locator('input.score-input').count()===0);
+  await first.focus();await page.keyboard.press('Escape');
+  check('Esc undoes the typed value and clears the mark',(await first.inputValue())==='49.00'||(await first.inputValue())==='49');
 
   // ---- D: publication strip, review dialog, Course locked until both periods are out
   await page.reload();await page.getByRole('heading',{name:'Gradebook'}).waitFor();

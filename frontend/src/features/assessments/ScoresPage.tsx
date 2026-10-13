@@ -65,18 +65,23 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
   const focusScore=useRef(false);                       // set when Save and next moves on, so the next student's score box takes focus
   const ungraded=(r:ScoreRow)=>r.score===null||r.new_version_since_grading;
   // Classroom's groups: Graded = returned, Assigned = nothing handed in or scored, Turned in = everything between (work in, or a score not returned yet)
-  const groupOf=(r:ScoreRow):Group=>r.score!==null&&!r.to_return&&!r.new_version_since_grading?'graded':r.score===null&&!(kind==='activity'&&r.latest)?'assigned':'turned_in';
+  const groupOf=(r:ScoreRow):Group=>r.excused||r.score!==null&&!r.to_return&&!r.new_version_since_grading?'graded':r.score===null&&!(kind==='activity'&&r.latest)?'assigned':'turned_in';
   const inGroup=(r:ScoreRow)=>group==='all'||groupOf(r)===group;
   const shown=rows.filter(r=>inGroup(r)&&(!ungradedOnly||ungraded(r)));
   const groupCount=(g:Group)=>rows.filter(r=>g==='all'||groupOf(r)===g).length;
   const returnable=rows.filter(r=>ticked.has(r.student_id)&&r.to_return);
+  const tickedRows=rows.filter(r=>ticked.has(r.student_id));
+  async function excuseTicked(on:boolean){
+    try{for(const r of tickedRows)if(!!r.excused!==on)await send('PUT',`${base}/excuse/${r.student_id}`,{excused:on});const text=on?`Excused ${tickedRows.length} student${tickedRows.length===1?'':'s'} from this.`:'Excuse removed.';setMessage(text);toast(text);setTicked(new Set());await onSaved()}
+    catch(e){setMessage(errorText(e))}
+  }
   const tick=(id:string,on:boolean)=>setTicked(prev=>{const n=new Set(prev);if(on)n.add(id);else n.delete(id);return n});
   async function returnTicked(){
     try{const r=await post<{released:number}>(`${base}/release`,{student_ids:returnable.map(x=>x.student_id)});const text=r.released===0?'Nothing new to return.':`Returned ${r.released} result${r.released===1?'':'s'}.`;setMessage(text);toast(text);setTicked(new Set());await onSaved()}
     catch(e){setMessage(errorText(e))}
   }
   const row=rows.find(r=>r.student_id===selected)??shown[0]??rows[0];
-  const status=(r:ScoreRow)=>!ungraded(r)?`${fmt(r.score)} / ${fmt(max)}`:r.score!==null?'Resubmitted':kind==='activity'?(r.latest?'Turned in':'Assigned'):'Not scored';
+  const status=(r:ScoreRow)=>r.excused?'Excused':!ungraded(r)?`${fmt(r.score)} / ${fmt(max)}`:r.score!==null?'Resubmitted':kind==='activity'?(r.latest?'Turned in':'Assigned'):'Not scored';
   if(rows.length===0)return <section className="panel"><h3>{heading}</h3><p className="muted">No students to show.</p></section>;
   const at=row?shown.findIndex(r=>r.student_id===row.student_id):-1;
   const nextId=at>=0?shown[at+1]?.student_id:undefined;
@@ -86,7 +91,8 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
     <div className="grading">
       <div className="grade-list">
         <div className="actions"><label className="inline"><input type="checkbox" checked={shown.length>0&&shown.every(r=>ticked.has(r.student_id))} onChange={e=>setTicked(e.target.checked?new Set(shown.map(r=>r.student_id)):new Set())}/> Select all</label>
-          <button type="button" className={returnable.length>0?'primary':''} disabled={closed||returnable.length===0} onClick={returnTicked}>{returnable.length>0?`Return ${returnable.length} selected`:'Return selected'}</button></div>
+          <button type="button" className={returnable.length>0?'primary':''} disabled={closed||returnable.length===0} onClick={returnTicked}>{returnable.length>0?`Return ${returnable.length} selected`:'Return selected'}</button>
+          <button type="button" disabled={closed||tickedRows.length===0} onClick={()=>excuseTicked(!tickedRows.every(r=>r.excused))}>{tickedRows.length>0&&tickedRows.every(r=>r.excused)?'Remove excuse':'Excuse selected'}</button></div>
         <label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>
         <p className="muted">{rows.filter(ungraded).length} of {rows.length} still ungraded.</p>
         {shown.length===0&&<p className="muted">Everyone listed has a score.</p>}
@@ -113,6 +119,7 @@ function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,on
     catch(e){setError(errorText(e))}
     finally{busy.current=false;setSaving(false)}
   }
+  async function excuse(){setError('');try{await send('PUT',`${base}/excuse/${row.student_id}`,{excused:!row.excused});setMessage(row.excused?`${row.student} is no longer excused.`:`${row.student} is excused from this.`);await onSaved()}catch(e){setError(errorText(e))}}
   const sub=row.latest;
   const card=<aside className="grade-card" aria-label={`Grade for ${row.student}`}><h4>{row.student}</h4><p className="muted">{row.student_number}</p>
     <label htmlFor={`s-${row.student_id}`}>Points (of {fmt(max)})</label>
@@ -121,7 +128,9 @@ function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,on
     <label htmlFor={`f-${row.student_id}`}>Feedback for the student</label><textarea id={`f-${row.student_id}`} value={feedback} maxLength={5000} disabled={closed} readOnly={saving} onChange={e=>setFeedback(e.target.value)}/>
     <div className="actions"><button className="primary" disabled={closed||saving} onClick={()=>void save(hasNext)}>{saving?'Saving…':hasNext?'Save and next':'Save'}</button>
       {hasNext&&<button disabled={closed||saving} onClick={()=>void save()}>Save only</button>}
+      {!closed&&<button onClick={excuse}>{row.excused?'Remove excuse':'Excuse'}</button>}
       {kind==='activity'&&!closed&&<button onClick={onPermission}>Allow resubmission</button>}</div>
+    {row.excused&&<p className="muted" role="status">Excused: this is left out of the student’s grade. The score and feedback are kept.</p>}
     {error&&<p id={`err-${row.student_id}`} role="alert" className="error">{error}</p>}</aside>;
   if(kind!=='activity')return <div className="grade-work">{card}</div>;
   return <div className="grade-work has-sub">{card}
