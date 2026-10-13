@@ -1,7 +1,6 @@
 import {useToast} from '../../components/undo';
-import {ClassworkTypes,FACULTY_CATS} from '../../components/ClassworkTypes';
 import {useState,type FormEvent} from 'react';
-import {useOutletContext} from 'react-router-dom';
+import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api,post,send,upload,errorText} from '../../app/api';
 import {queryClient,useAuth} from '../../app/providers';
@@ -33,7 +32,7 @@ export function SyllabusPage(){
   if(query.isPending)return <p>Loading syllabus…</p>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const {published,draft}=query.data;
-  const strip=<ClassworkTypes base={`/faculty/offerings/${offering.id}`} cats={FACULTY_CATS} current="syllabus"/>;
+  const strip=<p className="back"><Link to={`/faculty/offerings/${offering.id}/classwork`}>← Classwork</Link></p>;
   if(draft)return <>{strip}<DraftEditor key={draft.id} offering={offering} draft={draft} published={published} warnings={warnings} onChanged={refresh}/>{published&&<CoveragePanel offering={offering} published={published} closed={closed}/>}</>;
   return <>{strip}
     {message&&<p role="alert">{message}</p>}

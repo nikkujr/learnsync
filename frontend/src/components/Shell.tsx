@@ -8,6 +8,7 @@ import {useUnread} from './seen';
 import {StudyBuddy} from '../features/study/StudyBuddy';
 import {useConfirm} from './confirm';
 import {classColor,initials,useClasses} from './classes';
+import {NotificationBell} from './Notifications';
 
 type NavItem={to:string;label:string;icon:string;end?:boolean;dot?:boolean};
 const ROLE_LABEL={admin:'Academic administrator',faculty:'Teaching faculty',student:'Student'} as const;
@@ -79,6 +80,7 @@ export function Shell(){
     <header className="header">
       <button ref={menuButton} className="menu" aria-label="Toggle navigation" aria-expanded={open} aria-controls="drawer" onClick={toggle}><span aria-hidden="true">☰</span></button>
       <Link to={home} className="brand"><span className="mark" aria-hidden="true">L</span>LearnSync</Link>
+      <NotificationBell/>
       <details className="dropdown account" ref={account}>
         <summary aria-label={`Account menu for ${user.display_name}`}><span className="avatar" aria-hidden="true">{initials(user.display_name)}</span></summary>
         <div className="menu-list account-menu">

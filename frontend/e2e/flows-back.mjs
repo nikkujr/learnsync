@@ -69,7 +69,7 @@ try{
   // ---- phone width and keyboard: the same Back link is reachable and works
   const mob=await newPage(browser,{width:375,height:812,state:studentState});
   await mob.goto('/student');await mob.getByRole('heading',{name:'Home'}).waitFor();await mob.waitForLoadState('networkidle');
-  await mob.locator('a[href*="/work/"]').first().click();await mob.waitForURL(/\/student\/offerings\//);
+  await mob.locator('main a[href*="/work/"]').first().click();await mob.waitForURL(/\/student\/offerings\//);
   const link=backLink(mob);const box=await link.boundingBox();
   check('on a phone the Back link is at least 44px tall',box.height>=44,`${Math.round(box.height)}px`);
   await link.focus();await mob.keyboard.press('Enter');await mob.waitForURL(u=>new URL(u).pathname==='/student');

@@ -27,8 +27,8 @@ Added later: student `/student/todo` (all open work) and `/student/study-buddy` 
 Confirmations and undo (Phase 3): confirm only what cannot be undone or what students will see at once (return results, publish grades or an announcement, submit answers, delete or discard a draft, close a term, sign out with unsaved work), always through `useConfirm()` with the safe choice first. Reversible edits (remove a question, a chapter or the grading policy) use `useUndo()`. Never use the browser's `confirm()`.
 
 ## Classwork pattern (Phase 5)
-- Three levels, each looking different: the subject tabs (underline), the Classwork type pills (rounded, the selected one filled), then a segmented status filter (soft grey track, white selected segment). Chapters are bold headings with an accent underline; topics are indented under a vertical line.
-- The type pills are links (`?type=lesson|quiz|activity|exam`), shared through `components/ClassworkTypes.tsx`, so lesson, work and syllabus pages keep them and Back returns to the same pill.
+- Three levels, each looking different: the subject tabs (underline), then a segmented status filter (soft grey track, white selected segment). Chapters are bold headings with an accent underline; topics are indented under a vertical line.
+- There are no type pills any more: Classwork is one list under topics. `?type=lesson|quiz|activity|exam` still filters (old links) and shows a note with a way back; a Syllabus button sits where the pills were. The pile "Not under a topic" is split by kind (Lessons, Quizzes, Activities, Exams).
 - Route map: `/…/offerings/:id/stream | classwork | syllabus | people | grades`; old list addresses redirect into Classwork.
 
 ## Feedback toasts and celebration
@@ -51,4 +51,7 @@ A file page shows the PDF in a frame or the picture inline (never anything else)
 - Grades grid: type straight into a cell (Enter saves and moves down, Tab across, Esc undoes); there is no Edit scores step.
 - Student work page: ticked students can be returned or excused as a group; an excused student shows "Excused" everywhere and is left out of their grade.
 - The create page has an Attachments card (files and links) above the questions; students see them under Materials on the work page.
-- Classwork topic headings carry shortcuts to the other kinds of work in the topic (for example "Quizzes 2"), opening that kind filtered to the topic.
+- Classwork topic headings carry a plain summary of what the topic holds (for example "2 quizzes · 1 activity"), not links.
+- Top bar: a bell (notifications) before the account menu: unread count badge, newest first, "Mark all as read", Escape closes and returns focus; each notice is a link to the thing. Its accessible name carries the unread count.
+- Teacher Classwork rows end in a ⋮ menu (Edit, View student work, Copy link, Make a copy, Unpublish, Archive or Restore with Undo, Delete only for never-published work, after a confirm). It closes on outside click, Escape and choosing an item.
+- The student work page has an Unsubmit button after turning in (until graded) and a private comments card ("Private comments" between the student and the teacher); the teacher's grading panel shows the same thread for the selected student.

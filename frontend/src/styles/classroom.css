@@ -127,10 +127,10 @@ th{text-transform:none;letter-spacing:0;font-size:.85rem}
 .seq.compact{gap:0;margin:0 0 16px}
 .seq.compact li{position:relative;padding:4px 8px 4px 64px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:none;min-height:60px;align-items:center}
 .seq.compact li:hover{background:var(--surface-alt)}
-.seq.compact li::before{content:'▤';position:absolute;left:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--action);color:var(--action-text);font-size:1.05rem}
-.seq.compact li[data-cat=quiz]::before{content:'?'}
-.seq.compact li[data-cat=activity]::before{content:'✎'}
-.seq.compact li[data-cat=exam]::before{content:'✱'}
+.seq.compact li::before{content:'▤';position:absolute;left:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--kind-material);color:var(--action-text);font-size:1.05rem}
+.seq.compact li[data-cat=quiz]::before{content:'?';background:var(--kind-quiz)}
+.seq.compact li[data-cat=activity]::before{content:'✎';background:var(--kind-activity)}
+.seq.compact li[data-cat=exam]::before{content:'✱';background:var(--kind-exam)}
 .seq.compact li.next{box-shadow:none}
 .seq.compact li.next::before{box-shadow:0 0 0 3px var(--accent-soft)}
 .seq.compact .grow a{font-weight:500;color:var(--text)}
@@ -256,9 +256,10 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .grade-list li{display:flex;align-items:center;gap:4px}
 .grade-list li .grade-student{flex:1;min-width:0}
 .grade-list input.tick{width:22px;height:22px;min-height:0;flex:none;margin:0 4px}
-.gradebook .cell-missing{color:var(--danger)}
-.gradebook .cell-turned,.gradebook .cell-draft{color:var(--success)}
-.gradebook .tone-text{font-size:.78rem;font-weight:600}
+.gradebook .score-cell{display:flex;align-items:center;gap:6px}
+.gradebook .score-cell .score-input{flex:none;min-width:0;width:4.5rem}
+.gradebook .flag{display:inline-flex;flex:none;cursor:help}
+.gradebook .flag.danger{color:var(--danger)}.gradebook .flag.success{color:var(--success)}.gradebook .flag.warning{color:var(--warning)}.gradebook .flag.muted{color:var(--muted)}
 .link-row{display:flex;flex-wrap:wrap;gap:0 24px;margin-top:16px}
 .link-row a{display:inline-flex;align-items:center;min-height:44px}
 /* topic list: roomier, titles on at most two lines, the count in its own column */
@@ -292,3 +293,44 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .gradebook .score-input:focus{border-color:var(--action);background:var(--surface)}
 .gradebook .score-input[aria-invalid=true]{border-color:var(--danger)}
 .gradebook .cell>span:first-child{display:inline-block;padding-left:11px}
+/* option 2: no type pills; Syllabus and Create sit in one row; a note appears only when an old link asks for one kind */
+.filter-note{margin:0 0 12px;font-size:.9rem;display:flex;flex-wrap:wrap;align-items:center;gap:0 6px}.filter-note a{display:inline-flex;align-items:center;min-height:44px;padding:0 6px}
+.topic-summary{margin-left:12px;font-size:.85rem;font-weight:400}
+.kind-head{display:flex;align-items:baseline;gap:8px;margin:20px 0 4px;font-size:.95rem;font-weight:600;color:var(--muted)}
+.kind-head .count{font-weight:400}
+.kind-group:first-of-type .kind-head{margin-top:8px}
+/* the bell */
+.bell{margin-left:auto}
+.bell+.account{margin-left:0}
+.bell>summary{position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;font-size:1.2rem;cursor:pointer;list-style:none}
+.bell>summary::-webkit-details-marker{display:none}
+.bell>summary:hover{background:var(--surface-alt)}
+.bell-count{position:absolute;top:4px;right:2px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--danger);color:#fff;font-size:.72rem;font-weight:700;line-height:20px;text-align:center}
+.bell-menu{right:0;left:auto;width:min(380px,calc(100vw - 24px));max-height:70vh;overflow:auto;padding:8px;gap:0;border-radius:16px}
+.bell-head{display:flex;justify-content:space-between;align-items:center;padding:4px 8px 8px;border-bottom:1px solid var(--border)}
+.bell-menu>p{padding:12px 8px;margin:0}
+.bell-list{list-style:none;margin:0;padding:0}
+.bell-list a{display:flex;gap:12px;align-items:flex-start;min-height:56px;padding:10px 8px;border-radius:8px;color:var(--text);text-decoration:none}
+.bell-list a:hover{background:var(--surface-alt)}
+.bell-list li.unread a{background:var(--accent-soft)}
+.bell-icon{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--action);color:var(--action-text);font-size:.95rem}
+.bell-text{display:grid;min-width:0;line-height:1.3}
+.bell-text .muted{font-size:.8rem}
+.bell-list li:not(.unread) .bell-text strong{font-weight:500}
+/* the row menu */
+.row-menu{position:relative;margin-left:4px}
+.row-menu>summary{list-style:none;cursor:pointer}
+.row-menu>summary::-webkit-details-marker{display:none}
+.row-menu .menu-list{min-width:200px;z-index:6}
+.menu-list a{display:flex;align-items:center;min-height:44px;padding:0 14px;border-radius:6px;color:var(--text);text-decoration:none}
+.menu-list a:hover,.menu-list a:focus-visible{background:var(--surface-alt)}
+/* private comments */
+.comments{margin-top:20px;padding-top:12px;border-top:1px solid var(--border)}
+.comments h3{margin:0 0 8px}
+.comment-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.comment-list li{padding:8px 12px;border-radius:12px;background:var(--surface-alt)}
+.comment-list li.from-teacher{background:var(--accent-soft)}
+.comment-meta{display:flex;justify-content:space-between;gap:12px;margin:0 0 2px;font-size:.85rem}
+.comment-list p.pre{margin:0}
+.comments form{display:grid;gap:8px}
+.comments textarea{min-height:64px}

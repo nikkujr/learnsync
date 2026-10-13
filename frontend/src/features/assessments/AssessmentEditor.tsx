@@ -3,7 +3,6 @@ import {Link,useNavigate,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api,post,send,errorText,upload} from '../../app/api';
 import {queryClient,useAuth} from '../../app/providers';
-import {catOfKind} from '../../components/ClassworkTypes';
 import {useConfirm} from '../../components/confirm';
 import {Dialog} from '../../components/Dialog';
 import {useUndo} from '../../components/undo';
@@ -25,7 +24,7 @@ export function AssessmentEditorPage(){
   const query=useQuery({queryKey:['assessment',assessmentId],queryFn:()=>api<Assessment>(base)});
   const [starting,setStarting]=useState(false);
   const item=query.data;
-  const back=`/faculty/offerings/${offering.id}/classwork${item?`?type=${catOfKind(item.kind)}`:''}`;      // return to the pill this belongs to
+  const back=`/faculty/offerings/${offering.id}/classwork`;
   const needsDraft=!!item&&!item.draft&&!closed;
   useEffect(()=>{
     if(!needsDraft||starting)return;
@@ -99,7 +98,7 @@ function Editor({offering,assessment,refetch}:{offering:OfferingSummary;assessme
   const outline=syllabus.data?.published?.outline??syllabus.data?.draft?.outline;
   const nodes=outline?nodeLabels(outline):[];
   const base=`/teach/offerings/${offering.id}/assessments/${assessment.id}`;
-  const back=`/faculty/offerings/${offering.id}/classwork?type=${catOfKind(assessment.kind)}`;
+  const back=`/faculty/offerings/${offering.id}/classwork`;
   const quiz=assessment.kind==='online_quiz';
   const locked=quiz&&assessment.has_attempts&&!!assessment.published;
   const [message,setMessage]=useState('');

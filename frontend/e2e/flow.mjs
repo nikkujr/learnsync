@@ -128,8 +128,8 @@ try{
   await teach.waitForTimeout(2500);
   await shot(teach,'flow-2-quiz-editor');
   await teach.getByRole('button',{name:'Assign',exact:true}).click();
-  await teach.waitForURL(/\/classwork\?type=quiz$/);
-  await teach.getByText('Published v1').first().waitFor();
+  await teach.waitForURL(/\/classwork$/);
+  await teach.getByText('Venture basics quiz').first().waitFor();          // the list is no longer filtered to quizzes, so wait for the quiz itself
   check('the quiz is published',(await text(teach)).includes('Venture basics quiz'));
 
   // ---------- 5. the student studies and takes the quiz ----------

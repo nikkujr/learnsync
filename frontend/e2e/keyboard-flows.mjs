@@ -54,7 +54,7 @@ try{
   await fp.context().close();
 
   const sp=await open(student,{accept:true});
-  await sp.goto(`/student/offerings/${O}/classwork?type=quiz`);await sp.locator('nav.type-tabs').waitFor();await sp.waitForLoadState('networkidle');
+  await sp.goto(`/student/offerings/${O}/classwork?type=quiz`);await sp.locator('ul.seq').first().waitFor();await sp.waitForLoadState('networkidle');
   await tabTo(sp,d=>d.tag==='a'&&d.href.endsWith(quizId),'the quiz link');await press(sp,'Enter');
   await tabTo(sp,named(/Start/,'button'),'Start the quiz');await press(sp,'Enter');
   await sp.getByText('Which one is a business form?').waitFor();

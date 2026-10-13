@@ -148,19 +148,31 @@ function CellView({cell,kind,deadline,column,student,editing,value,problem,onTyp
   if(!cell)return <span className="muted" title="Does not apply to this student's section">n/a</span>;
   const state=kind==='online_quiz'&&cell.score===null?(cell.attempt_state==='in_progress'?'In progress':'Not attempted'):null;
   const shownValue=value??(cell.score===null?'':String(cell.score));
-  // Classroom's colours, always with a word as well: missing (red), turned in or a score not returned yet (green), returned (plain)
+  // the state shows as a colour-coded icon beside the score (see Flag); the score text itself stays plain
   const handedIn=kind==='online_quiz'?cell.attempt_state==='submitted':!!cell.turned_in;
   const missing=!cell.excused&&cell.score===null&&!handedIn&&(kind==='activity'||kind==='online_quiz')&&!!deadline&&Date.parse(deadline)<Date.now();
-  const tone=cell.score!==null?(cell.unreleased_change?'cell-draft':''):handedIn?'cell-turned':missing?'cell-missing':'';
-  return <div className={`cell ${tone}`}>
+  return <div className="cell score-cell">
     {editing?<input className="score-input" inputMode="decimal" data-col={nav.col} data-row={nav.row} aria-label={`${column}, score for ${student}`} aria-invalid={!!problem} value={shownValue} placeholder="—" onChange={e=>onType(e.target.value)} onBlur={onCommit}
         onKeyDown={e=>{if(e.nativeEvent.isComposing)return;if(e.key==='Enter'){e.preventDefault();onCommit();onMove(e.shiftKey?-1:1)}else if(e.key==='Escape'){e.preventDefault();onRevert()}}}/>
       :<span>{cell.score===null?'—':fmt(cell.score)}</span>}
     {problem&&<span className="error" role="alert"> {problem}</span>}
-    {state&&!missing&&<span className="muted"> {state}</span>}
-    {missing&&<span className="tone-text"> Missing</span>}{cell.score===null&&handedIn&&<span className="tone-text"> Turned in</span>}
-    {cell.excused&&<span className="badge"> Excused</span>}
-    {cell.unreleased_change&&!cell.excused&&<span className="badge"> Unreleased change</span>}</div>;
+    {state&&!missing&&<Flag tone="muted" icon={state==='In progress'?'clock':'circle'} text={state==='In progress'?'In progress: the student has started but not submitted.':'Not attempted: the student has not started this quiz.'}/>}
+    {missing&&<Flag tone="danger" icon="alert" text="Missing: past due and not turned in."/>}
+    {cell.score===null&&handedIn&&<Flag tone="success" icon="check" text="Turned in: waiting for a score."/>}
+    {cell.excused&&<Flag tone="muted" icon="minus" text="Excused: left out of the grade."/>}
+    {cell.unreleased_change&&!cell.excused&&<Flag tone="warning" icon="pencil" text="Unreleased change: the student still sees the older result."/>}</div>;
+}
+
+// Material-style 24px glyphs; the message shows on hover (title) and is read out by screen readers (aria-label). Not focusable, so Tab keeps moving between score cells.
+const FLAGS:Record<string,string>={
+  alert:'M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+  check:'M12 2a10 10 0 100 20 10 10 0 000-20zm-2 15l-5-5 1.4-1.4L10 14.2l7.6-7.6L19 8l-9 9z',
+  clock:'M12 2a10 10 0 100 20 10 10 0 000-20zm.5 5v5.2l4.5 2.7-.8 1.3L11 13V7h1.5z',
+  circle:'M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z',
+  minus:'M12 2a10 10 0 100 20 10 10 0 000-20zm5 11H7v-2h10v2z',
+  pencil:'M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'};
+function Flag({tone,icon,text}:{tone:'danger'|'success'|'warning'|'muted';icon:string;text:string}){
+  return <span className={`flag ${tone}`} role="img" aria-label={text} title={text}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d={FLAGS[icon]}/></svg></span>;
 }
 
 function GradeCell({row,period,onReview}:{row:GradeRow;period:string;onReview:(r:GradeRow)=>void}){

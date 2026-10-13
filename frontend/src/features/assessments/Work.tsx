@@ -1,4 +1,3 @@
-import {ClassworkTypes} from '../../components/ClassworkTypes';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {Link,useLocation,useNavigate,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -9,6 +8,7 @@ import {useConfirm} from '../../components/confirm';
 import {useToast} from '../../components/undo';
 import {useOrigin} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
+import {CommentThread} from './Comments';
 import {fmt,when,type AttemptView,type LearnItem} from './types';
 
 const STATE_LABEL:Record<string,string>={available:'Assigned',in_progress:'In progress',not_open:'Not open yet',done:'Done',closed:'Closed',submitted:'Turned in',resubmit:'Turned in · you can resubmit'};
@@ -75,6 +75,11 @@ export function WorkDetail(){
     try{await upload(`/learn/offerings/${offering.id}/assessments/${item!.id}/submissions`,form);setMessage('Turned in. Your teacher can see it now.');toast('Turned in. Your teacher can see it now.');await query.refetch()}
     catch(err){setMessage(errorText(err))}finally{setBusy(false)}
   }
+  async function unsubmit(){
+    setMessage('');setBusy(true);
+    try{await send('POST',`/learn/offerings/${offering.id}/assessments/${item!.id}/unsubmit`);toast('Unsubmitted. You can turn it in again.');await query.refetch()}
+    catch(err){setMessage(errorText(err))}finally{setBusy(false)}
+  }
   async function markDone(e:FormEvent<HTMLFormElement>){
     e.preventDefault();setMessage('');
     const note=String(new FormData(e.currentTarget).get('note')??'');   // read before awaiting
@@ -83,7 +88,6 @@ export function WorkDetail(){
     catch(err){setMessage(errorText(err))}finally{setBusy(false)}
   }
   return <>
-    <ClassworkTypes base={`/student/offerings/${offering.id}`} current={item.kind==='online_quiz'?'quiz':'activity'}/>
     <p className="back"><Link to={origin.to}>← Back to {origin.label}</Link></p>
     <div className="assignment"><article className="panel"><p className="eyebrow">{item.kind==='online_quiz'?'Quiz':'Activity'}</p><h2>{item.title}</h2>
       {item.instructions&&<p className="pre">{item.instructions}</p>}
@@ -102,17 +106,19 @@ export function WorkDetail(){
         {item.state==='not_open'&&<p>This activity has not opened yet.</p>}
         {item.requires_file===false?(item.can_submit?<form onSubmit={markDone}>
           <p className="muted">Nothing to upload. Mark it done when you have finished.</p>
-          <label>Private comment to your teacher (optional)<textarea name="note" maxLength={2000}/></label>
+          <label>Note for your teacher (optional)<textarea name="note" maxLength={2000}/></label>
           {item.would_be_late&&<p className="warn" role="status">The deadline has passed. This will be marked late.</p>}
           <button className="primary" disabled={busy}>{busy?'Saving…':'Mark as done'}</button></form>
           :item.submissions?.length?null:item.state!=='not_open'&&<p className="warn" role="status">The deadline has passed. Ask your teacher if you still need to turn it in.</p>)
         :item.can_submit?<form onSubmit={submitFile}><label>{item.submissions?.length?'Add a new PDF to resubmit':'Add your work as a PDF'} (up to 20 MB)<input name="file" type="file" accept=".pdf,application/pdf" required/></label>
-          <label>Private comment to your teacher (optional)<textarea name="note" maxLength={2000}/></label>
+          <label>Note for your teacher (optional)<textarea name="note" maxLength={2000}/></label>
           {item.would_be_late&&<p className="warn" role="status">The deadline has passed. This will be marked late.</p>}
           <button className="primary" disabled={busy}>{busy?'Turning in…':item.submissions?.length?'Resubmit':'Turn in'}</button></form>
           :item.state!=='not_open'&&<p className="warn" role="status">{item.submissions?.length?'The deadline has passed, so your submission can no longer be replaced. Ask your teacher if you need to change it.':'The deadline has passed. Ask your teacher if you still need to submit.'}</p>}
         {item.submissions&&item.submissions.length>0&&<><h3>Your submissions</h3>
           <ul>{[...item.submissions].reverse().map(s=><li key={s.version}>Version {s.version} · {when(s.submitted_at)}{s.is_late?' · late':''} · {s.file?<a className="touch" href={`/api/files/${s.file.id}/download`}>{s.file.name}</a>:'Marked done'}{s.note&&<span className="muted"> — {s.note}</span>}</li>)}</ul></>}</>}
+      {item.kind==='activity'&&item.can_unsubmit&&<p><button type="button" disabled={busy} onClick={()=>void unsubmit()}>Unsubmit</button> <span className="muted">Take it back to change it, until your teacher grades it.</span></p>}
+      {!item.excused&&<CommentThread url={`/learn/offerings/${offering.id}/assessments/${item.id}/comments`}/>}
     </aside></div></>;
 }
 

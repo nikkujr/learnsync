@@ -1,13 +1,14 @@
 import type React from 'react';
 import {useEffect,useRef,useState} from 'react';
 import {Link,useNavigate,useOutletContext,useSearchParams} from 'react-router-dom';
-import {ClassworkTypes,FACULTY_CATS,catOf,catOfKind,CATS,type Cat} from '../../components/ClassworkTypes';
+import {FACULTY_CATS,catOf,catOfKind,CATS,type Cat} from '../../components/ClassworkTypes';
 import {useHere} from '../../components/origin';
 import {useQuery} from '@tanstack/react-query';
 import {api,send,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
 import type {OfferingSummary} from '../academics/types';
 import {useUndo} from '../../components/undo';
+import {useConfirm} from '../../components/confirm';
 import {GenerateDialog} from '../study/Generate';
 import {NewDialog,assessmentStatus,assessmentTitle} from '../assessments/Assessments';
 import {detail as workDetail} from '../assessments/Work';
@@ -32,7 +33,7 @@ export function FacultyClasswork(){
   const assessments=useQuery({queryKey:['assessments',offering.id],queryFn:()=>api<Assessment[]>(`/teach/offerings/${offering.id}/assessments`)});
   const syllabus=useQuery({queryKey:['syllabus',offering.id],queryFn:()=>api<SyllabusState>(`/teach/offerings/${offering.id}/syllabus`)});
   const nodes=useNodes(offering.id);
-  const offer=useUndo();
+  const offer=useUndo();const ask=useConfirm();
   const [create,setCreate]=useState<Create>(null);
   const [search,setSearch]=useState('');const [archived,setArchived]=useState(false);
   const cat=catOf(useSearchParams()[0].get('type'),FACULTY_CATS);const topic=useSearchParams()[0].get('topic');
@@ -41,7 +42,8 @@ export function FacultyClasswork(){
   const [reorder,setReorder]=useState<string|null>(null);const [moved,setMoved]=useState('');const [dragging,setDragging]=useState<string|null>(null);
   const menu=useRef<HTMLDetailsElement>(null);
   useEffect(()=>{
-    const outside=(e:Event)=>{const d=menu.current;if(d?.open&&!(e.target instanceof Node&&d.contains(e.target)))d.open=false};
+    const outside=(e:Event)=>{const d=menu.current;if(d?.open&&!(e.target instanceof Node&&d.contains(e.target)))d.open=false;
+      document.querySelectorAll('details.row-menu[open]').forEach(m=>{if(!(e.target instanceof Node&&m.contains(e.target)))m.removeAttribute('open')})};
     const escape=(e:KeyboardEvent)=>{const d=menu.current;if(e.key==='Escape'&&d?.open){d.open=false;d.querySelector('summary')?.focus()}};
     document.addEventListener('click',outside);document.addEventListener('keydown',escape);
     return()=>{document.removeEventListener('click',outside);document.removeEventListener('keydown',escape)};
@@ -101,6 +103,23 @@ export function FacultyClasswork(){
         catch(e){setMoved(errorText(e))}})}
     catch(e){setMoved(errorText(e))}
   }
+  const path=(r:Row)=>r.type==='item'?`/teach/offerings/${offering.id}/items/${r.id}`:`/teach/offerings/${offering.id}/assessments/${r.id}`;
+  const refreshLists=()=>Promise.all([queryClient.invalidateQueries({queryKey:['items',offering.id]}),queryClient.invalidateQueries({queryKey:['assessments',offering.id]})]);
+  const editTo=(r:Row)=>r.type==='item'?r.to:`${base}/assessments/${r.id}/edit`;
+  async function archive(r:Row,on:boolean){
+    try{await send('PATCH',path(r),{archived:on});await refreshLists();
+      offer(on?`“${r.title}” is archived.`:`“${r.title}” is restored.`,async()=>{try{await send('PATCH',path(r),{archived:!on});await refreshLists()}catch(e){setMoved(errorText(e))}})}
+    catch(e){setMoved(errorText(e))}
+  }
+  async function remove(r:Row){
+    if(!await ask({title:`Delete “${r.title}”?`,message:'It was never published, so no student has seen it. This cannot be undone.',yes:'Delete',danger:true}))return;
+    try{await send('DELETE',path(r));await refreshLists();offer(`“${r.title}” was deleted.`)}catch(e){setMoved(errorText(e))}
+  }
+  async function copyOf(r:Row){
+    try{const made=await send<{id:string}>('POST',`${path(r)}/duplicate`,{});await refreshLists();navigate(`${base}/assessments/${made.id}/edit`)}catch(e){setMoved(errorText(e))}
+  }
+  async function copyLink(r:Row){try{await navigator.clipboard.writeText(location.origin+r.to);offer('Link copied.')}catch{offer('Could not copy the link.')}}
+  const closeMenu=(e:React.MouseEvent<HTMLElement>)=>{(e.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open')};
   const created=(to:string)=>{setCreate(null);queryClient.invalidateQueries({queryKey:['items',offering.id]});queryClient.invalidateQueries({queryKey:['assessments',offering.id]});navigate(to)};
 
   const stranded=rows.find(r=>r.type==='item'&&r.anchor&&!known.has(r.anchor));   // its topic left the syllabus: fix it before reordering
@@ -112,23 +131,33 @@ export function FacultyClasswork(){
       <header><Heading id={`c-${n.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(n.id)} onClick={()=>fold(n.id)}>{n.title}</button></Heading><span className="count">{total(n)}</span>{depth===0&&chips(n.id)}
         {items.length>1&&!closed&&!stranded&&<button type="button" className="linklike" aria-pressed={reorder===n.id} onClick={()=>setReorder(reorder===n.id?null:n.id)}>{reorder===n.id?'Done reordering':'Reorder'}</button>}</header>
       {reorder===n.id&&<p className="muted">Drag a row onto another to move it, or use the arrow buttons.</p>}
-      {!folded.has(n.id)&&n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=>{const drag=reorder===n.id&&r.type==='item'&&!closed;
+      {!folded.has(n.id)&&n.rows.length>0&&grouped(n.id==='other',n.rows,rs=><ul className="seq compact">{rs.map(r=>{const drag=reorder===n.id&&r.type==='item'&&!closed;
         return <li key={r.key} data-cat={r.cat} className={dragging===r.id?'dragging':drag?'draggable':undefined} draggable={drag||undefined}
           onDragStart={drag?e=>{setDragging(r.id);e.dataTransfer.effectAllowed='move'}:undefined} onDragEnd={drag?()=>setDragging(null):undefined}
           onDragOver={drag&&dragging?e=>e.preventDefault():undefined} onDrop={drag?e=>{e.preventDefault();const d=n.rows.find(x=>x.id===dragging);setDragging(null);if(d)void place(n,d,r)}:undefined}>
         {drag&&<span className="drag-handle" aria-hidden="true">⋮⋮</span>}<span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
         {r.counts&&!r.archived&&<span className="row-counts" aria-label="Student work"><Link to={`${r.to}/scores?status=turned_in`}><strong>{r.counts.turned_in}</strong> Turned in</Link><Link to={`${r.to}/scores?status=assigned`}><strong>{r.counts.assigned}</strong> Assigned</Link><Link to={`${r.to}/scores?status=graded`}><strong>{r.counts.graded}</strong> Graded</Link></span>}
-        <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span>{r.canUnpublish&&!closed&&<button type="button" className="linklike" onClick={()=>unpublish(r)}>Unpublish</button>}
+        <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span>{!closed&&<details className="dropdown row-menu"><summary className="icon-btn" aria-label={`More actions for ${r.title}`}><span aria-hidden="true">⋮</span></summary>
+          <div className="menu-list" role="group" aria-label={`Actions for ${r.title}`}>
+            <Link to={editTo(r)} onClick={closeMenu}>Edit</Link>
+            {r.type==='assessment'&&r.published&&<Link to={`${base}/assessments/${r.id}/scores`} onClick={closeMenu}>View student work</Link>}
+            <button type="button" onClick={e=>{closeMenu(e);void copyLink(r)}}>Copy link</button>
+            {r.type==='assessment'&&<button type="button" onClick={e=>{closeMenu(e);void copyOf(r)}}>Make a copy</button>}
+            {r.canUnpublish&&<button type="button" onClick={e=>{closeMenu(e);void unpublish(r)}}>Unpublish</button>}
+            <button type="button" onClick={e=>{closeMenu(e);void archive(r,!r.archived)}}>{r.archived?'Restore':'Archive'}</button>
+            {!r.published&&<><hr/><button type="button" onClick={e=>{closeMenu(e);void remove(r)}}>Delete</button></>}
+          </div></details>}
         {reorder===n.id&&r.type==='item'&&<span className="actions"><button type="button" aria-label={`Move ${r.title} up`} disabled={closed||items.indexOf(r)===0} onClick={()=>move(n,items,r,-1)}>↑</button>
-          <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>})}</ul>}
+          <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>})}</ul>)}
       {!folded.has(n.id)&&n.kids.map(k=>branch(k,depth+1))}</section>};
   const label=FACULTY_CATS.find(c=>c[0]===cat)?.[1]??'classwork';
-  const chips=topicChips(catCounts(buildTree(outline,rows.filter(r=>archived||!r.archived))),cat,FACULTY_CATS);
+  const chips=topicChips(catCounts(buildTree(outline,rows.filter(r=>archived||!r.archived))));
   return <>
-    <div className="type-row"><ClassworkTypes base={base} cats={FACULTY_CATS} current={cat} counts={{all:rows.filter(r=>archived||!r.archived).length,...Object.fromEntries(FACULTY_CATS.map(([k])=>[k,rows.filter(r=>r.cat===k&&(archived||!r.archived)).length]))}}/>
+    <div className="type-row"><Link className="button" to={`${base}/syllabus`}>Syllabus</Link>
       <details className="dropdown" ref={menu}><summary className={`button primary${closed?' disabled':''}`} aria-disabled={closed} onClick={e=>{if(closed)e.preventDefault()}}>+ Create</summary>
         <div className="menu-list" role="group" aria-label="Create">{CREATE.map(([label,target],i)=><span key={label} className="menu-item">{(i===3||i===8)&&<hr/>}
           <button type="button" onClick={()=>choose(target)}>{label}</button></span>)}</div></details></div>
+    {cat!=='all'&&<p className="filter-note muted">Showing {label.toLowerCase()} only. <Link to={`${base}/classwork`}>Show everything</Link></p>}
     {!published&&!draft&&!closed&&<section className="panel" aria-labelledby="syl-h"><h3 id="syl-h">Set up this subject</h3><p className="muted">Not set up yet. A guided setup creates the syllabus, grading policy and first topics in a few steps.</p>
       <Link className="button primary" to={`${base}/setup`}>Set up this subject</Link></section>}
     <div className="cw-bar"><p className="muted">Students only see what you publish: edits stay drafts until you do.</p>
@@ -169,13 +198,21 @@ const rowsUnder=<T,>(n:TNode<T>):T[]=>[...n.rows,...n.kids.flatMap(rowsUnder)];
 function catCounts<T extends {cat:string}>(tree:TNode<T>[]){
   return Object.fromEntries(tree.map(n=>{const c:Record<string,number>={};for(const r of rowsUnder(n))c[r.cat]=(c[r.cat]??0)+1;return [n.id,c]}));
 }
-/** Shortcuts on a topic heading: the other kinds of work in that topic, each opening that kind filtered to the topic. */
-function topicChips(counts:Record<string,Record<string,number>>,current:string,cats:[Cat,string][]){
+const NAMES:Record<string,[string,string]>={lesson:['lesson','lessons'],quiz:['quiz','quizzes'],activity:['activity','activities'],exam:['exam','exams']};
+/** A topic heading's one-line summary of what it holds ("1 lesson · 2 quizzes"), shown only when it holds more than one kind. */
+function topicChips(counts:Record<string,Record<string,number>>){
   return (id:string)=>{
-    const c=counts[id]??{};const shown=cats.filter(([k])=>k!==current&&(c[k]??0)>0);
-    if(current==='all'||shown.length===0)return null;
-    return <span className="topic-chips" aria-label="Other work in this topic">{shown.map(([k,l])=><Link key={k} className="topic-chip" to={`?type=${k}&topic=${id}`}>{l} <strong>{c[k]}</strong></Link>)}</span>;
+    const c=counts[id]??{};const kinds=Object.keys(NAMES).filter(k=>(c[k]??0)>0);
+    if(kinds.length<2)return null;
+    return <span className="topic-summary muted">{kinds.map(k=>`${c[k]} ${NAMES[k]![c[k]===1?0:1]}`).join(' · ')}</span>;
   };
+}
+const KIND_ORDER:[string,string][]=[['lesson','Lessons'],['quiz','Quizzes'],['activity','Activities'],['exam','Exams']];
+/** The pile "Not under a topic" is split by kind so a long list is easy to scan; a real topic keeps its rows in one list. */
+function grouped<T extends {cat:string}>(split:boolean,rows:T[],render:(rows:T[])=>React.ReactElement){
+  const parts=KIND_ORDER.map(([k,l])=>[l,rows.filter(r=>r.cat===k)] as const).filter(([,list])=>list.length>0);
+  if(!split||parts.length<2)return render(rows);
+  return <>{parts.map(([l,list])=><div className="kind-group" key={l}><h4 className="kind-head">{l}<span className="count">{list.length}</span></h4>{render(list)}</div>)}</>;
 }
 const idsOf=<T,>(tree:TNode<T>[]):string[]=>tree.flatMap(n=>[n.id,...idsOf(n.kids)]);
 /** Which topics are folded, and the two buttons that fold or unfold all of them. */
@@ -208,10 +245,10 @@ function Branch({node,depth,here,folded,fold,chips,bare=false}:{node:TNode;depth
   const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];
   return <section className={`tree d${Math.min(depth,2)}`} aria-labelledby={`t-${node.id}`}>
     {bare?<h3 id={`t-${node.id}`} className="sr-only">{node.title}</h3>:<header><Heading id={`t-${node.id}`}><button type="button" className="topic-toggle" aria-expanded={!folded.has(node.id)} onClick={()=>fold(node.id)}>{node.title}</button></Heading><span className="count">{total(node)}</span>{depth===0&&chips(node.id)}</header>}
-    {!folded.has(node.id)&&node.rows.length>0&&<ul className="seq compact">{[...node.rows].sort((a,b)=>rank(a)-rank(b)).map(r=><li key={r.key} data-cat={r.cat} className={r.chips.some(c=>c.cls==='next')?'next':undefined}>
+    {!folded.has(node.id)&&node.rows.length>0&&grouped(node.id==='other',[...node.rows].sort((a,b)=>rank(a)-rank(b)),rs=><ul className="seq compact">{rs.map(r=><li key={r.key} data-cat={r.cat} className={r.chips.some(c=>c.cls==='next')?'next':undefined}>
       <span className="grow"><Link state={here} to={r.to}>{r.title}</Link>{(r.detail||r.result)&&<span className="muted">{r.detail}{r.detail&&r.result?' · ':''}{r.result&&<strong>{r.result}</strong>}</span>}</span>
       {r.chips.map(c=><span key={c.text} className={`badge ${c.cls??''}`}>{c.text}</span>)}
-      {r.kind==='item'&&r.todo&&<Link state={here} className="start" to={r.to} title="Open this" aria-hidden="true" tabIndex={-1}>▶</Link>}</li>)}</ul>}
+      {r.kind==='item'&&r.todo&&<Link state={here} className="start" to={r.to} title="Open this" aria-hidden="true" tabIndex={-1}>▶</Link>}</li>)}</ul>)}
     {!folded.has(node.id)&&node.kids.map(k=><Branch key={k.id} node={k} depth={depth+1} here={here} folded={folded} fold={fold} chips={chips}/>)}
   </section>;
 }
@@ -246,11 +283,12 @@ export function StudentClasswork(){
   const outline=syllabus.data?.published?.outline;
   const shownRows=rows.filter(want);
   const tree=buildTree(outline,shownRows);
-  const chips=topicChips(catCounts(buildTree(outline,rows)),cat,CATS);
+  const chips=topicChips(catCounts(buildTree(outline,rows)));
   const count=(k:Filter)=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(k==='all'||(k==='todo'?r.todo:r.done))).length;
   return <>
     {rows.length===0?<section className="panel"><h2>Nothing yet</h2><p>Published lessons, files, links, quizzes and activities appear here.</p></section>:<>
-      <div className="type-row"><ClassworkTypes base={base} current={cat} counts={{all:rows.length,...Object.fromEntries(CATS.map(([k])=>[k,rows.filter(r=>r.cat===k).length]))}}/><Link className="button" to={`${base}/your-work`}>View your work</Link></div>
+      <div className="type-row"><Link className="button" to={`${base}/syllabus`}>Syllabus</Link><Link className="button" to={`${base}/your-work`}>View your work</Link></div>
+      {cat!=='all'&&<p className="filter-note muted">Showing {CATS.find(c=>c[0]===cat)?.[1]?.toLowerCase()} only. <Link to={`${base}/classwork`}>Show everything</Link></p>}
       <div className="cw-bar">
         {(cat==='lesson'||cat==='all')&&lessons.length>0&&<div className="seq-head"><p><strong>{finished} of {lessons.length}</strong> complete</p>
           {next&&<Link className="button primary" to={`${base}/lessons/${next.id}`}>Continue: {next.title}</Link>}</div>}

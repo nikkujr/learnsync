@@ -5,11 +5,11 @@ import {useQuery,type UseQueryResult} from '@tanstack/react-query';
 import {api,post,send,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
 import {Dialog} from '../../components/Dialog';
-import {catOfKind} from '../../components/ClassworkTypes';
 import {useConfirm} from '../../components/confirm';
 import {useOrigin} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
 import {VerdictBadge} from './AnswerReview';
+import {CommentThread} from './Comments';
 import {KIND_LABEL,fmt,when,type Assessment,type AttemptDetail,type AttemptRow,type ScoreRow} from './types';
 
 export function ScoresPage(){
@@ -19,7 +19,7 @@ export function ScoresPage(){
   const closed=offering.term_status==='closed';
   const base=`/teach/offerings/${offering.id}/assessments/${assessmentId}`;
   const a=useQuery({queryKey:['assessment',assessmentId],queryFn:()=>api<Assessment>(base)});
-  const origin=useOrigin(`/faculty/offerings/${offering.id}/classwork${a.data?`?type=${catOfKind(a.data.kind)}`:''}`,'Classwork');
+  const origin=useOrigin(`/faculty/offerings/${offering.id}/classwork`,'Classwork');
   const rows=useQuery({queryKey:['scores',assessmentId],queryFn:()=>api<ScoreRow[]>(`${base}/scores`)});
   const attempts=useQuery({queryKey:['attempts',assessmentId],queryFn:()=>api<AttemptRow[]>(`${base}/attempts`),enabled:a.data?.kind==='online_quiz'});
   const [message,setMessage]=useState('');
@@ -131,7 +131,8 @@ function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,on
       {!closed&&<button onClick={excuse}>{row.excused?'Remove excuse':'Excuse'}</button>}
       {kind==='activity'&&!closed&&<button onClick={onPermission}>Allow resubmission</button>}</div>
     {row.excused&&<p className="muted" role="status">Excused: this is left out of the student’s grade. The score and feedback are kept.</p>}
-    {error&&<p id={`err-${row.student_id}`} role="alert" className="error">{error}</p>}</aside>;
+    {error&&<p id={`err-${row.student_id}`} role="alert" className="error">{error}</p>}
+    <CommentThread url={`${base}/comments/${row.student_id}`}/></aside>;
   if(kind!=='activity')return <div className="grade-work">{card}</div>;
   return <div className="grade-work has-sub">{card}
     <section className="grade-sub" aria-label={`Work from ${row.student}`}>{sub?<>
@@ -139,7 +140,7 @@ function GradePanel({row,kind,base,max,closed,onSaved,setMessage,onPermission,on
         <span className="muted">Version {sub.version} of {row.versions} · {when(sub.submitted_at)}</span>{sub.is_late&&<> <span className="badge">Late</span></>}</p>
       {sub.note&&<p className="pre">{sub.note}</p>}
       {row.new_version_since_grading&&<p className="warn" role="status">New version since you graded. Review it and save the score again.</p>}
-      {sub.file&&<iframe className="file-frame" src={`/api/files/${sub.file.id}/preview`} title={`Preview of ${sub.file.name}`}/>}</>:<p className="muted">Nothing submitted yet.</p>}
+      {sub.file&&<iframe className="file-frame" src={`/api/files/${sub.file.id}/preview`} title={`Preview of ${sub.file.name}`}/>}</>:<div className="empty-work" role="status"><span aria-hidden="true">📭</span><strong>Nothing submitted yet</strong><span className="muted">Work from {row.student} will show up here.</span></div>}
       {row.permission_open&&<p className="muted">A resubmission permission is open.</p>}</section></div>;
 }
 

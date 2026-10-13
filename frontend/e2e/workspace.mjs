@@ -40,7 +40,8 @@ try{
 
   // ---- teacher: pills, status filter, reorder
   await teach.goto(`${fb}/classwork?type=lesson`);await teach.getByRole('heading',{name:'Not under a topic'}).waitFor();
-  check('the teacher sees All, Lessons, Quizzes, Activities, Exams and Syllabus pills',(await teach.locator('nav[aria-label="Classwork type"] a').allInnerTexts()).map(t=>t.replace(/\d+|\s/g,'')).join(',')==='All,Lessons,Quizzes,Activities,Exams,Syllabus');
+  check('Classwork has no type pills: one list under topics, with Syllabus beside Create',await teach.locator('nav[aria-label="Classwork type"]').count()===0&&await teach.getByRole('link',{name:'Syllabus',exact:true}).count()===1);
+  check('an old ?type= link still filters, and says so with a way back',(await teach.locator('.filter-note').innerText()).includes('Show everything'));
   await teach.getByRole('button',{name:'Reorder'}).first().click();
   await teach.getByRole('button',{name:`Move ${B} up`}).click();
   await teach.getByText(`Moved “${B}” up`,{exact:false}).waitFor();
@@ -66,14 +67,11 @@ try{
     const label=await activeTab(stu).catch(()=>'(none)');
     check(`student ${from.replace(sb,'.')} lands on ${to.replace(sb,'.')} under the ${tab} tab`,where(stu)===to&&label===tab,`${where(stu).replace(sb,'.')} / ${label}`)}
   check('a student has three subject tabs',await stu.locator('nav[aria-label="Subject sections"] a').count()===3);
-  await stu.goto(`${sb}/classwork?type=lesson`);await stu.getByRole('link',{name:B,exact:true}).click();await stu.waitForSelector('nav[aria-label="Classwork type"]');
-  check('opening a lesson keeps the pills with Lessons selected',(await stu.locator('nav[aria-label="Classwork type"] a.active').innerText()).startsWith('Lessons'));
+  await stu.goto(`${sb}/classwork`);await stu.getByRole('link',{name:B,exact:true}).click();await stu.waitForLoadState('networkidle');
   await stu.getByRole('link',{name:/Back to Classwork/}).click();await stu.waitForSelector('ul.seq');
-  check('Back from the lesson returns to the Lessons pill',where(stu)===`${sb}/classwork?type=lesson`,where(stu));
-  await stu.getByRole('button',{name:/^Completed/}).click();
-  check('each pill remembers its own status filter',await stu.locator('.segmented button.on').innerText().then(t=>t.startsWith('Completed')));
-  await stu.getByRole('link',{name:/^Quizzes/}).click();await stu.waitForLoadState('networkidle');
-  check('switching pill shows that pill’s own filter, not the previous one',(await stu.locator('.segmented button.on').innerText()).startsWith('Everything'));
+  check('Back from the lesson returns to the Classwork list',where(stu)===`${sb}/classwork`,where(stu));
+  await stu.getByRole('button',{name:/^Done/}).click();
+  check('the status filter (Everything, To do, Done) works on the one list',await stu.locator('.segmented button.on').innerText().then(t=>t.startsWith('Done')));
   check('axe finds no violations on student Classwork',(await axe(stu)).length===0);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();

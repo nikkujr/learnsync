@@ -4,7 +4,6 @@ import {useInfiniteQuery,useQuery} from '@tanstack/react-query';
 import {api,post,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
 import {useHere,useOrigin} from '../../components/origin';
-import {ClassworkTypes} from '../../components/ClassworkTypes';
 import {celebrate} from '../../components/celebrate';
 import {useToast} from '../../components/undo';
 import type {OfferingSummary} from '../academics/types';
@@ -28,7 +27,7 @@ export function StudentSyllabus(){
     return <span className="linked" aria-label="Lessons and materials for this part">{list.map(i=>i.kind==='file'&&i.file?
       <a key={i.id} href={`/api/files/${i.file.id}/download`}>▤ {i.title}</a>:
       <Link key={i.id} state={here} to={`/student/offerings/${offering.id}/lessons/${i.id}`}>▤ {i.title}</Link>)}</span>};
-  const strip=<ClassworkTypes base={`/student/offerings/${offering.id}`} current="syllabus"/>;
+  const strip=<p className="back"><Link to={`/student/offerings/${offering.id}/classwork`}>← Classwork</Link></p>;
   if(!published)return <>{strip}<section className="panel"><h2>The syllabus is not published yet</h2><p>Your teacher will publish it here.</p></section></>;
   return <>{strip}<p className="muted">Version {published.version} · published {when(published.published_at)}. “Covered in class” is your teacher’s record, not your own progress.</p>
     <OutlineView outline={published.outline} policy={published.grading_policy} coveredOn={new Map(covered.map(c=>[c.node_id,c.covered_on]))} extra={materials}/></>;
@@ -98,7 +97,7 @@ export function StudentLesson(){
   if(query.error)return <section className="panel"><h2>Not available</h2><p role="alert">{query.error.message}</p><Link to={back}>Back to classwork</Link></section>;
   const i=query.data;
   const nextLabel=(k?:string)=>k==='file'?'Next file':k==='reference'?'Next link':'Next lesson';
-  return <><ClassworkTypes base={`/student/offerings/${offeringId}`} current="lesson"/><article className="panel"><p className="back"><Link to={back}>← Back to {origin.label}</Link></p><h2>{i.title}</h2>
+  return <><article className="panel"><p className="back"><Link to={back}>← Back to {origin.label}</Link></p><h2>{i.title}</h2>
     {i.kind==='lesson'&&<div className="rich-content" dangerouslySetInnerHTML={{__html:i.body_html??''}}/>}
     {i.kind==='file'&&i.file&&<FileCard file={i.file}/>}
     {i.kind==='reference'&&<LinkCard url={i.reference_url} note={i.reference_note}/>}
