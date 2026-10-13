@@ -23,7 +23,7 @@ function navigation(role:'admin'|'faculty'|'student'):{label:string;items:NavIte
     settings];
   const student=role==='student';
   return [
-    {label:'',items:[{to:home,label:'Home',icon:'⌂',end:true,dot:student},...(student?[{to:`${home}/todo`,label:'To-do',icon:'☑'}]:[{to:`${home}/review`,label:'To review',icon:'✎'}])]},
+    {label:'',items:[{to:home,label:'Home',icon:'⌂',end:true,dot:student},...(student?[{to:`${home}/todo`,label:'To-do',icon:'☑'}]:[{to:`${home}/review`,label:'To review',icon:'✎'}]),{to:`${home}/calendar`,label:'Calendar',icon:'▦'}]},
     {label:'',items:[{to:`${home}/subjects`,label:'All subjects',icon:'▤'},{to:`${home}/issues`,label:'Report a problem',icon:'?'},...settings.items]}];
 }
 

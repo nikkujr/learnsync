@@ -37,7 +37,7 @@ export function FacultyClasswork(){
   const [search,setSearch]=useState('');const [archived,setArchived]=useState(false);
   const cat=catOf(useSearchParams()[0].get('type'),FACULTY_CATS);const topic=useSearchParams()[0].get('topic');
   const [statuses,setStatuses]=useState<Record<string,'all'|'published'|'draft'>>({});const status=statuses[cat]??'all';
-  const [reorder,setReorder]=useState<string|null>(null);const [moved,setMoved]=useState('');
+  const [reorder,setReorder]=useState<string|null>(null);const [moved,setMoved]=useState('');const [dragging,setDragging]=useState<string|null>(null);
   const menu=useRef<HTMLDetailsElement>(null);
   useEffect(()=>{
     const outside=(e:Event)=>{const d=menu.current;if(d?.open&&!(e.target instanceof Node&&d.contains(e.target)))d.open=false};
@@ -81,6 +81,15 @@ export function FacultyClasswork(){
       await queryClient.invalidateQueries({queryKey:['items',offering.id]});setMoved(`Moved “${row.title}” ${step<0?'up':'down'} to position ${visible.indexOf(row)+step+1} of ${visible.length}.`)}
     catch(e){setMoved(errorText(e));queryClient.invalidateQueries({queryKey:['items',offering.id]})}
   }
+  /** Drag and drop: the dragged item takes the place of the one it is dropped on. The arrow buttons stay for keyboard use. */
+  async function place(n:TNode<Row>,row:Row,target:Row){
+    const everyone=rows.filter(r=>r.type==='item'&&inNode(n,r)).map(r=>r.id);const all=[...everyone];
+    const a=all.indexOf(row.id),b=all.indexOf(target.id);if(a<0||b<0||a===b)return;
+    all.splice(a,1);all.splice(b,0,row.id);
+    try{await send('PUT',`/teach/offerings/${offering.id}/items-order`,{anchor_node_id:n.id==='other'?null:n.id,expected_ids:everyone,item_ids:all});
+      await queryClient.invalidateQueries({queryKey:['items',offering.id]});setMoved(`Moved “${row.title}” to position ${b+1} of ${all.length}.`)}
+    catch(e){setMoved(errorText(e));queryClient.invalidateQueries({queryKey:['items',offering.id]})}
+  }
   async function unpublish(r:Row){
     try{
       const view=await send<Assessment>('POST',`/teach/offerings/${offering.id}/assessments/${r.id}/unpublish`,{});
@@ -101,11 +110,15 @@ export function FacultyClasswork(){
     return <section key={n.id} className={`tree d${Math.min(depth,2)}`} aria-labelledby={`c-${n.id}`}>
       <header><Heading id={`c-${n.id}`}>{n.title}</Heading><span className="count">{total(n)}</span>
         {items.length>1&&!closed&&!stranded&&<button type="button" className="linklike" aria-pressed={reorder===n.id} onClick={()=>setReorder(reorder===n.id?null:n.id)}>{reorder===n.id?'Done reordering':'Reorder'}</button>}</header>
-      {n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=><li key={r.key} data-cat={r.cat}>
-        <span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
+      {reorder===n.id&&<p className="muted">Drag a row onto another to move it, or use the arrow buttons.</p>}
+      {n.rows.length>0&&<ul className="seq compact">{n.rows.map(r=>{const drag=reorder===n.id&&r.type==='item'&&!closed;
+        return <li key={r.key} data-cat={r.cat} className={dragging===r.id?'dragging':drag?'draggable':undefined} draggable={drag||undefined}
+          onDragStart={drag?e=>{setDragging(r.id);e.dataTransfer.effectAllowed='move'}:undefined} onDragEnd={drag?()=>setDragging(null):undefined}
+          onDragOver={drag&&dragging?e=>e.preventDefault():undefined} onDrop={drag?e=>{e.preventDefault();const d=n.rows.find(x=>x.id===dragging);setDragging(null);if(d)void place(n,d,r)}:undefined}>
+        {drag&&<span className="drag-handle" aria-hidden="true">⋮⋮</span>}<span className="grow"><Link to={r.to}>{r.title}</Link><span className="muted">{r.meta}</span></span>
         <span className={r.published&&!r.archived?'badge done':'badge'}>{r.status}</span>{r.canUnpublish&&!closed&&<button type="button" className="linklike" onClick={()=>unpublish(r)}>Unpublish</button>}
         {reorder===n.id&&r.type==='item'&&<span className="actions"><button type="button" aria-label={`Move ${r.title} up`} disabled={closed||items.indexOf(r)===0} onClick={()=>move(n,items,r,-1)}>↑</button>
-          <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>)}</ul>}
+          <button type="button" aria-label={`Move ${r.title} down`} disabled={closed||items.indexOf(r)===items.length-1} onClick={()=>move(n,items,r,1)}>↓</button></span>}</li>})}</ul>}
       {n.kids.map(k=>branch(k,depth+1))}</section>};
   const label=FACULTY_CATS.find(c=>c[0]===cat)?.[1]??'classwork';
   return <>

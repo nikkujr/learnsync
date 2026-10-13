@@ -70,6 +70,17 @@ try{
   check('axe finds no violations on the lesson page',(await axe(lp)).length===0);
   await lp.getByRole('button',{name:'Close and go back to Classwork'}).click();await lp.waitForURL(/\/classwork(\?type=\w+)?$/);
   check('the closed lesson stays as a draft in Classwork',await lp.getByText('Compose lesson').first().waitFor({timeout:8000}).then(()=>true,()=>false));
+
+  // ---- D: the calendar shows due work by month, for both roles
+  const cal=await newPage(browser,{state:S});await cal.goto('/student/calendar');await cal.getByRole('heading',{name:'Calendar',exact:true}).waitFor();await cal.waitForLoadState('networkidle');
+  const month=new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  check('the student calendar opens on this month',(await cal.getByRole('heading',{level:2}).first().innerText())===month);
+  await cal.getByRole('button',{name:'Next month'}).click();
+  check('Next month moves on by one month',(await cal.getByRole('heading',{level:2}).first().innerText())!==month);
+  check('axe finds no violations on the student calendar',(await axe(cal)).length===0);
+  const fcal=await newPage(browser,{state:F});await fcal.goto('/faculty/calendar');await fcal.getByRole('heading',{name:'Calendar',exact:true}).waitFor();await fcal.waitForLoadState('networkidle');
+  check('the teacher calendar opens and has no axe violations',(await axe(fcal)).length===0);
+  await shot(fcal,'calendar-faculty',false);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

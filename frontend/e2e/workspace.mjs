@@ -46,6 +46,10 @@ try{
   await teach.getByText(`Moved “${B}” up`,{exact:false}).waitFor();
   const order=(await call(teach,'GET',`${T}/items`)).data.filter(i=>(i.published??i.draft).title.endsWith(String(n))).map(i=>(i.published??i.draft).title);
   check('Reorder moves a lesson up and the server keeps the order',order[0]===B&&order[1]===A,order.join(' > '));
+  await teach.locator('li[draggable=true]',{hasText:A}).dragTo(teach.locator('li[draggable=true]',{hasText:B}));
+  await teach.getByText(`Moved “${A}” to position 1`,{exact:false}).waitFor({timeout:8000}).catch(()=>{});
+  const dragged=(await call(teach,'GET',`${T}/items`)).data.filter(i=>(i.published??i.draft).title.endsWith(String(n))).map(i=>(i.published??i.draft).title);
+  check('dragging a lesson onto another moves it and the server keeps the order',dragged[0]===A&&dragged[1]===B,dragged.join(' > '));
   await teach.getByRole('button',{name:/^Drafts/}).click();
   check('the Drafts filter hides published lessons without a newer draft',await teach.locator('ul.seq li',{hasText:A}).count()===0);
   await teach.goto(`${fb}/content/${first}/edit`);await teach.waitForSelector('.compose-side');

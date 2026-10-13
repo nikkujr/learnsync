@@ -204,3 +204,21 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .topic-nav a:hover{background:var(--surface-alt)}
 .topic-nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 @media(min-width:900px){.cw-layout{grid-template-columns:220px minmax(0,1fr)}.topic-nav{flex-direction:column;flex-wrap:nowrap;gap:0;position:sticky;top:calc(var(--header-h,64px) + 16px);border-right:1px solid var(--border);padding-right:12px;margin:0}.topic-nav a{border-radius:0 22px 22px 0;padding-left:12px;justify-content:space-between}}
+/* calendar: a month of due work; a plain day-by-day list on phones */
+.cal-bar{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+.cal-bar h2{margin:0 8px;min-width:10ch;font-size:1.3rem;font-weight:500}
+.month{list-style:none;margin:0;padding:0}
+.month-head{display:none}
+.month>li{padding:8px 4px;border-bottom:1px solid var(--border)}
+.month>li.blank,.month>li[data-empty=true]{display:none}
+.month>li.today{background:var(--accent-soft)}
+.month .day-n{font-weight:600}
+.month ul{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:4px}
+.month ul a{display:grid;min-height:44px;align-content:center;padding:2px 8px;border-radius:6px;background:var(--surface-alt);color:var(--text);text-decoration:none;line-height:1.25}
+.month ul a:hover{background:var(--accent-soft)}
+.month ul .muted{font-size:.78rem}
+@media(min-width:900px){.month-head{display:grid;grid-template-columns:repeat(7,1fr);padding:6px 0;border-bottom:1px solid var(--border);color:var(--muted);font-size:.85rem;text-align:center}.month{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border)}.month>li,.month>li.blank,.month>li[data-empty=true]{display:block;min-height:112px;border-right:1px solid var(--border)}.month .day-name{display:none}.month ul a{min-height:0;padding:2px 6px;font-size:.82rem}}
+.seq.compact li.draggable{cursor:grab}
+.seq.compact li.dragging{opacity:.5}
+.seq.compact li.draggable:hover{outline:2px dashed var(--action);outline-offset:-2px}
+.drag-handle{color:var(--muted);letter-spacing:-2px;pointer-events:none;order:-1}
