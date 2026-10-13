@@ -203,7 +203,7 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .topic-nav a{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 16px;border-radius:22px;color:var(--text);font-weight:500;text-decoration:none}
 .topic-nav a:hover{background:var(--surface-alt)}
 .topic-nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
-@media(min-width:900px){.cw-layout{grid-template-columns:220px minmax(0,1fr)}.topic-nav{flex-direction:column;flex-wrap:nowrap;gap:0;position:sticky;top:calc(var(--header-h,64px) + 16px);border-right:1px solid var(--border);padding-right:12px;margin:0}.topic-nav a{border-radius:0 22px 22px 0;padding-left:12px;justify-content:space-between}}
+@media(min-width:900px){.cw-layout:has(>.topic-nav){grid-template-columns:220px minmax(0,1fr)}.topic-nav{flex-direction:column;flex-wrap:nowrap;gap:0;position:sticky;top:calc(var(--header-h,64px) + 16px);border-right:1px solid var(--border);padding-right:12px;margin:0}.topic-nav a{border-radius:0 22px 22px 0;padding-left:12px;justify-content:space-between}}
 /* calendar: a month of due work; a plain day-by-day list on phones */
 .cal-bar{display:flex;align-items:center;gap:8px;margin:0 0 12px}
 .cal-bar h2{margin:0 8px;min-width:10ch;font-size:1.3rem;font-weight:500}
@@ -232,3 +232,34 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .gradebook td{vertical-align:middle}
 .person-cell{display:flex;align-items:center;gap:12px;min-width:200px}
 .person-cell .muted{font-size:.78rem}
+/* home: due soon */
+.due-soon{margin:0 0 24px}
+.due-soon .section-head{margin-bottom:8px}
+.soon-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.soon-list a{display:grid;min-height:56px;align-content:center;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);text-decoration:none;line-height:1.3}
+.soon-list a:hover{background:var(--accent-soft)}
+.soon-list .muted{font-size:.8rem}
+.topic-toggle{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.topic-toggle::before{content:"";flex:none;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s}
+.topic-toggle[aria-expanded=false]::before{transform:rotate(-45deg)}
+.fold-all{display:flex;gap:4px;justify-content:flex-end;margin:0 0 4px}
+/* teacher rows: counts, and the assignment page numbers */
+.row-counts{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:.82rem}
+.row-counts a{display:inline-flex;align-items:center;gap:4px;min-height:44px;color:var(--muted);text-decoration:none}
+.row-counts a:hover{color:var(--action);text-decoration:underline}
+.row-counts strong{color:var(--text);font-size:1rem}
+.hub-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hub-stat{display:grid;justify-items:center;gap:2px;padding:12px 4px;min-height:64px;border-radius:var(--radius);color:var(--text);text-decoration:none}
+.hub-stat:hover{background:var(--accent-soft)}
+.hub-stat strong{font-size:1.8rem;font-weight:500;line-height:1}
+.hub-stat span{color:var(--muted);font-size:.85rem}
+.grade-list li{display:flex;align-items:center;gap:4px}
+.grade-list li .grade-student{flex:1;min-width:0}
+.grade-list input.tick{width:22px;height:22px;min-height:0;flex:none;margin:0 4px}
+.grade-list .type-tabs{margin:0 0 8px}
+.grade-list .type-tabs button{min-height:44px;padding:4px 12px}
+.gradebook .cell-missing{color:var(--danger)}
+.gradebook .cell-turned,.gradebook .cell-draft{color:var(--success)}
+.gradebook .tone-text{font-size:.78rem;font-weight:600}
+.link-row{display:flex;flex-wrap:wrap;gap:0 24px;margin-top:16px}
+.link-row a{display:inline-flex;align-items:center;min-height:44px}

@@ -14,5 +14,5 @@ export function GradesLayout(){
 
 export function StudentGradesLayout(){
   const context=useOutletContext();const {offeringId}=useParams();const base=`/student/offerings/${offeringId}`;
-  return <><SubTabs label="Grades" items={[{to:`${base}/results`,label:'Grades & results'},{to:`${base}/progress`,label:'My progress'}]}/><Outlet context={context}/></>;
+  return <><SubTabs label="Grades" items={[{to:`${base}/your-work`,label:'Your work'},{to:`${base}/results`,label:'Grades & results'},{to:`${base}/progress`,label:'My progress'}]}/><Outlet context={context}/></>;
 }

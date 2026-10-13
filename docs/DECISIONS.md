@@ -133,3 +133,12 @@
   2. An activity can be turned in WITHOUT a file. A new per-activity setting `requires_file` (default true, so every existing activity is unchanged). When false the student marks it done (one record, no file, no resubmission) and the teacher grades it like any other turned-in activity. Marked-done work counts as turned in, never as a score.
   3. The teacher Grades tab is restyled as Classroom's students-by-work grid (same data, same publication rules, same Edit scores mode). No change to what is calculated or published.
   Unchanged: published academic history, immutable publications and grade snapshots, server-side role and ownership checks.
+
+- 2026-10-13, human request ("implement all the recommendations"), after reading Google's own Classroom help pages: align with what they describe.
+  1. Students' class tabs are Stream, Classwork, People. The Grades tab is teacher-only; a student reaches grades through "Your work" (a link on the class card and on Classwork) with the filters Assigned, Returned with grade and Missing, and the published grades at the top. The student People tab lists the TEACHER only; classmates are still not shown (earlier ruling kept).
+  2. The student Home shows a "Due soon" strip (up to 5 items across classes, with "View to-dos") above the class cards.
+  3. The To-do's Missing tab also lists work that closed without a submission (past due, late submission not accepted); this supersedes the earlier "overdue work only when late submission is permitted" for the Missing list (the work still cannot be submitted). Done lists turned-in work, returned work and quizzes with another attempt.
+  4. A teacher's Classwork rows for assignments show Turned in / Assigned / Graded counts and open an assignment page (instructions, counts, links to the student work page); the student work page groups students by those statuses, lets the teacher tick students and Return only those.
+  5. New assessments default to 100 points (quizzes still total their questions).
+  6. The Grades grid colours cells like Classroom (turned in or draft green, returned plain, missing red) and shows an overall working grade next to the student's name.
+  NOT done on purpose (open decisions, no recommendation given): teacher attachments on assignments, Excuse, typing straight into the grid, inline topic creation (topics are the published syllabus, so a new topic would edit the syllabus).

@@ -88,7 +88,14 @@ def assessment_view(db, a):
 def faculty_list(db, offering):
     rows = db.scalars(select(Assessment).where(Assessment.offering_id == offering.id)
                       .order_by(Assessment.created_at)).all()
-    return [assessment_view(db, a) for a in rows]
+    from . import status  # imported here: status needs scores, which needs this module
+    out = []
+    for a in rows:
+        view = assessment_view(db, a)
+        if view["published"] and not a.archived:
+            view["counts"] = status.counts(db, offering, a)
+        out.append(view)
+    return out
 
 
 def create(db, actor, offering, data):
@@ -98,6 +105,8 @@ def create(db, actor, offering, data):
     db.add(a)
     db.flush()
     defaults = {"max_attempts": 1, "include_in_grade": True}
+    if data.kind != "online_quiz":
+        defaults["max_points"] = Decimal(100)      # like Classroom; an online quiz totals its questions instead
     db.add(AssessmentRevision(assessment_id=a.id, version=1, title=data.title,
                               created_by=actor.id, **defaults))
     for section_id in section_ids:

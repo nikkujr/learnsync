@@ -29,7 +29,7 @@ function Hero({eyebrow,title,detail,action,to,icon}:{eyebrow:string;title:string
 }
 
 // ---------------------------------------------------------------- student
-export interface Work{late_allowed?:boolean;offering_id:string;assessment_id:string;kind:string;title:string;subject:string;deadline:string|null;available_from?:string|null;state?:string;attempts_left?:number}
+export interface Work{result?:{score:number;max_points:number}|null;late_allowed?:boolean;offering_id:string;assessment_id:string;kind:string;title:string;subject:string;deadline:string|null;available_from?:string|null;state?:string;attempts_left?:number}
 interface StudentHomeData{name:string;subjects:{offering_id:string;code:string;title:string;percent:number|null;done:number;total:number;to_do:number}[];
   week:{days:{label:string;date:string;count:number;today:boolean;future:boolean}[];lessons_today:number;work_today:number};
   next_step:{type:string;title:string;subject:string;link:string}|null;todo:Work[];todo_total:number;awaiting_feedback:Work[];another_attempt:Work[];
@@ -48,12 +48,15 @@ export function StudentHome(){
   useEffect(()=>{if(latest)markSeen(uid,latest)},[uid,latest]);
   return <Page query={query}>{d=>{
     const only=d.subjects.length===1?d.subjects[0]:null;
+    const soon=d.todo.filter(w=>w.deadline&&w.state!=='not_open').slice(0,5);
     return <>
       <h1 className="sr-only">Home</h1>
+      {soon.length>0&&<section className="due-soon" aria-labelledby="soon-h"><div className="section-head"><h2 id="soon-h">Due soon</h2><Link state={here} to="/student/todo">View to-dos</Link></div>
+        <ul className="soon-list">{soon.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}><strong>{w.title}</strong><span className="muted">{w.subject} · due {dateTime(w.deadline!)}</span></Link></li>)}</ul></section>}
       <section aria-labelledby="subjects-h"><h2 id="subjects-h" className="sr-only">Your classes</h2>
         {d.subjects.length===0?<p className="panel muted">No current subjects. You are not enrolled in a current subject yet.</p>:<div className="class-grid">{d.subjects.map(s=>{const c=teachers.get(s.offering_id);
           return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={c?.section??s.code} teacher={c?.teacher??''} meta={s.to_do?plural(s.to_do,'item')+' to do':'Nothing to do'}
-            progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Grades',`/student/offerings/${s.offering_id}/results`]]}/>})}</div>}</section>
+            progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Your work',`/student/offerings/${s.offering_id}/your-work`]]}/>})}</div>}</section>
       <div className="dash-grid home-more">
         <div className="dash-main">
           {d.next_step?<Hero eyebrow={d.next_step.type==='lesson'?'Your next step':'Your next task'} title={d.next_step.title} detail={d.next_step.subject} action={d.next_step.type==='lesson'?'Continue learning':'Open work'} to={d.next_step.link} icon="▤"/>
@@ -69,14 +72,10 @@ export function StudentHome(){
           </section>
         </div>
         <div className="dash-side">
-          <section className="panel"><h2>To do</h2>
-            {d.todo.length===0?<p className="muted">Nothing needs your action.</p>:<ul className="rows">{d.todo.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}>{w.title}</Link>
-              <span className="muted">{w.subject} · {w.kind==='online_quiz'?'Quiz':'Activity'} · {w.state==='not_open'?(w.available_from?`opens ${dateTime(w.available_from)}`:'not open yet'):w.deadline?(w.late_allowed?`late submission allowed, was due ${dateTime(w.deadline)}`:`due ${dateTime(w.deadline)}`):'no deadline'}</span></li>)}</ul>}
-            {d.todo_total>d.todo.length&&<p className="muted">and {d.todo_total-d.todo.length} more. </p>}
-            <Link state={here} className="touch" to="/student/todo">See everything to do</Link>
+          {(d.awaiting_feedback.length>0||d.another_attempt.length>0)&&<section className="panel"><h2>On your list</h2>
             {d.awaiting_feedback.length>0&&<><h3>Awaiting feedback</h3><ul className="rows">{d.awaiting_feedback.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · submitted</span></li>)}</ul></>}
             {d.another_attempt.length>0&&<><h3>Another attempt available</h3><ul className="rows">{d.another_attempt.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {plural(w.attempts_left??0,'attempt')} left</span></li>)}</ul></>}
-          </section>
+          </section>}
           <section className="panel"><h2>Course updates</h2>
             {d.updates.length===0?<p className="muted">No updates in the last 30 days.</p>:<ul className="rows updates">{d.updates.map((u,i)=><li key={i}><span className="eyebrow">{UPDATE_LABEL[u.type]??u.type} · {when(u.at)}{Date.parse(u.at)>seenBefore.current&&<> · <span className="badge">New</span></>}</span><Link state={here} to={u.link}>{u.title}</Link><span className="muted">{u.subject}</span></li>)}</ul>}
           </section>
@@ -186,7 +185,7 @@ export function StudentTodo(){
   const here=useHere();
   const [params]=useSearchParams();
   const tab=TODO_TABS.find(t=>t[0]===params.get('tab'))?.[0]??'assigned';
-  const query=useQuery({queryKey:['todo','student'],queryFn:()=>api<{todo:Work[];awaiting_feedback:Work[];another_attempt:Work[]}>('/dashboard/student/todo')});
+  const query=useQuery({queryKey:['todo','student'],queryFn:()=>api<{todo:Work[];awaiting_feedback:Work[];another_attempt:Work[];missing:Work[];done:Work[]}>('/dashboard/student/todo')});
   const row=(w:Work,note:string)=><li key={w.assessment_id} data-cat={w.kind==='online_quiz'?'quiz':'activity'}><span className="grow"><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {w.kind==='online_quiz'?'Quiz':'Activity'} · {note}</span></span></li>;
   const group=(title:string,hint:string,items:Work[],note:(w:Work)=>string)=><section className="tree d0" key={title}><header><h2>{title}</h2><span className="count">{items.length}</span></header>{hint&&<p className="muted">{hint}</p>}
     <ul className="seq compact">{items.map(w=>row(w,note(w)))}</ul></section>;
@@ -194,21 +193,21 @@ export function StudentTodo(){
     <div className="page-heading"><div><h1>To-do</h1><p className="muted">Quizzes and activities from every current subject.</p></div></div>
     <Page query={query}>{d=>{
       const now=Date.now();const past=(w:Work)=>!!w.deadline&&Date.parse(w.deadline)<now;
-      const missing=d.todo.filter(past),assigned=d.todo.filter(w=>!past(w)),done=[...d.another_attempt,...d.awaiting_feedback];
+      const missing=[...d.todo.filter(past),...d.missing],assigned=d.todo.filter(w=>!past(w)),done=[...d.done,...d.another_attempt,...d.awaiting_feedback];
       const counts={assigned:assigned.length,missing:missing.length,done:done.length};
       const thisWeek=endOfWeek(now);
       const bucket=(w:Work)=>!w.deadline?'No due date':Date.parse(w.deadline)<=thisWeek?'This week':Date.parse(w.deadline)<=thisWeek+WEEK?'Next week':'Later';
       const due=(w:Work)=>w.state==='not_open'&&w.available_from?`opens ${dateTime(w.available_from)}`:w.deadline?`due ${dateTime(w.deadline)}`:'no deadline';
-      const pastNote=(w:Work)=>`was due ${dateTime(w.deadline!)}${w.late_allowed?' · late submission allowed':''}`;
-      const doneNote=(w:Work)=>d.another_attempt.includes(w)?`${plural(w.attempts_left??0,'attempt')} left, you can try again`:'submitted, awaiting feedback';
+      const pastNote=(w:Work)=>`was due ${dateTime(w.deadline!)}${w.late_allowed?' · late submission allowed':' · closed'}`;
+      const doneNote=(w:Work)=>d.another_attempt.includes(w)?`${plural(w.attempts_left??0,'attempt')} left, you can try again`:w.result?`returned · ${w.result.score.toFixed(2)} / ${w.result.max_points.toFixed(2)}`:'turned in, awaiting feedback';
       const everything=counts.assigned+counts.missing+counts.done===0;
       return <>
         <nav className="tabs" aria-label="To-do sections">{TODO_TABS.map(([k,l])=><Link key={k} to={`?tab=${k}`} replace className={tab===k?'active':undefined} aria-current={tab===k?'page':undefined}>{l}{counts[k]>0&&<span className="tab-count">{counts[k]}</span>}</Link>)}</nav>
         {everything&&<section className="panel"><h2>You’re up to date</h2><p className="muted">Nothing needs your action. New work appears here when your teacher publishes it.</p><Link state={here} className="button" to="/student/subjects">See my subjects</Link></section>}
         {!everything&&tab==='assigned'&&(assigned.length===0?<p className="muted">Nothing is assigned right now.</p>
           :(['No due date','This week','Next week','Later'] as const).map(b=>{const items=assigned.filter(w=>bucket(w)===b);return items.length>0&&group(b,'',items,due)}))}
-        {!everything&&tab==='missing'&&(missing.length===0?<p className="muted">Nothing is missing. Overdue work shows here only while your teacher still accepts it late.</p>:group('Past due','Your teacher still accepts these late.',missing,pastNote))}
-        {!everything&&tab==='done'&&(done.length===0?<p className="muted">Nothing is done yet.</p>:group('Done','Submitted work, and quizzes you can try again.',done,doneNote))}
+        {!everything&&tab==='missing'&&(missing.length===0?<p className="muted">Nothing is missing. Work that is past due and was not turned in shows here.</p>:group('Missing','Past due and not turned in. Work marked closed can no longer be turned in.',missing,pastNote))}
+        {!everything&&tab==='done'&&(done.length===0?<p className="muted">Nothing is done yet.</p>:group('Done','Turned in or returned, and quizzes you can try again.',done,doneNote))}
       </>}}</Page>
   </>;
 }

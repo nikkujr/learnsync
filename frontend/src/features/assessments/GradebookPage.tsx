@@ -111,8 +111,8 @@ export function GradebookPage(){
             {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><th key={c.id}><Link state={here} to={`/faculty/offerings/${offering.id}/assessments/${c.id}/scores`} title="Open this assessment's scores and attempts">{c.title}</Link><br/><span className="muted">Out of {fmt(c.max_points)}</span><br/><span className="muted">{label(c.category_key)}</span></th>),<th key={p+'g'}>Grade</th>])}
             <th>Grade</th></tr></thead>
         <tbody>{rows.map(r=><tr key={r.student_id}>
-          <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}</span></span></span></th>
-          {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
+          <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}{r.grades.course?.grade!=null?` · Overall ${fmt(r.grades.course.grade)}`:''}</span></span></span></th>
+          {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} deadline={c.deadline} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
             onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)}/></td>),
             <td key={p+'g'}><GradeCell row={r} period={p} onReview={setDetail}/></td>])}
           <td><GradeCell row={r} period="course" onReview={setDetail}/></td></tr>)}</tbody></table></div></section>
@@ -142,15 +142,20 @@ function PublishDialog({offeringId,period,stats,onClose,onPublished}:{offeringId
     <div className="actions"><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy||stats.changes===0} onClick={go}>{busy?'Publishing…':stats.changes===0?'Nothing new to publish':`Publish ${stats.changes} grade${stats.changes===1?'':'s'}`}</button></div></Dialog>;
 }
 
-function CellView({cell,kind,column,student,editing,value,problem,onType}:{cell?:Cell;kind:string;column:string;student:string;editing:boolean;value?:string;problem?:string;onType:(v:string)=>void}){
+function CellView({cell,kind,deadline,column,student,editing,value,problem,onType}:{cell?:Cell;kind:string;deadline?:string|null;column:string;student:string;editing:boolean;value?:string;problem?:string;onType:(v:string)=>void}){
   if(!cell)return <span className="muted" title="Does not apply to this student's section">n/a</span>;
   const state=kind==='online_quiz'&&cell.score===null?(cell.attempt_state==='in_progress'?'In progress':'Not attempted'):null;
   const shownValue=value??(cell.score===null?'':String(cell.score));
-  return <div className="cell">
+  // Classroom's colours, always with a word as well: missing (red), turned in or a score not returned yet (green), returned (plain)
+  const handedIn=kind==='online_quiz'?cell.attempt_state==='submitted':!!cell.turned_in;
+  const missing=cell.score===null&&!handedIn&&(kind==='activity'||kind==='online_quiz')&&!!deadline&&Date.parse(deadline)<Date.now();
+  const tone=cell.score!==null?(cell.unreleased_change?'cell-draft':''):handedIn?'cell-turned':missing?'cell-missing':'';
+  return <div className={`cell ${tone}`}>
     {editing?<input className="score-input" inputMode="decimal" aria-label={`${column}, score for ${student}`} aria-invalid={!!problem} value={shownValue} placeholder="—" onChange={e=>onType(e.target.value)}/>
       :<span>{cell.score===null?'—':fmt(cell.score)}</span>}
     {problem&&<span className="error" role="alert"> {problem}</span>}
-    {state&&<span className="muted"> {state}</span>}
+    {state&&!missing&&<span className="muted"> {state}</span>}
+    {missing&&<span className="tone-text"> Missing</span>}{cell.score===null&&handedIn&&<span className="tone-text"> Turned in</span>}
     {cell.unreleased_change&&<span className="badge"> Unreleased change</span>}</div>;
 }
 

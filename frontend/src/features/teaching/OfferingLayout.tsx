@@ -16,8 +16,8 @@ function MainTabs({role,base}:{role:'faculty'|'student';base:string}){
   const tabs:Tab[]=role==='faculty'
     ?[{label:'Stream',to:`${base}/stream`,segments:['stream','announcements']},{label:'Classwork',to:`${base}/classwork`,segments:['classwork','syllabus','content','assessments']},
       {label:'People',to:`${base}/people`,segments:['people','attendance','progress','students']},{label:'Grades',to:`${base}/grades`,segments:['grades','gradebook','class-standing'],hidden:!graded}]
-    :[{label:'Stream',to:`${base}/stream`,segments:['stream','announcements']},{label:'Classwork',to:`${base}/classwork`,segments:['classwork','syllabus','lessons','work']},
-      {label:'Grades',to:`${base}/grades`,segments:['grades','results','progress']}];
+    :[{label:'Stream',to:`${base}/stream`,segments:['stream','announcements']},{label:'Classwork',to:`${base}/classwork`,segments:['classwork','syllabus','lessons','work','your-work','results','progress','grades']},
+      {label:'People',to:`${base}/people`,segments:['people']}];
   return <nav className="tabs" aria-label="Subject sections">{tabs.filter(t=>!t.hidden).map(t=>{const on=t.segments.includes(segment);
     return <Link key={t.label} to={t.to} className={on?'active':undefined} aria-current={on?'page':undefined}>{t.label}</Link>})}</nav>;
 }

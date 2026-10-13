@@ -244,3 +244,44 @@ def test_an_activity_can_be_turned_in_by_marking_it_done(graded):
     plain = make_manual(graded, "activity", "Needs a PDF", points="10", category_key="activity", deadline=iso(24))
     assert st1.post(la(graded, f"/assessments/{plain}/mark-done"), {}).json()["error"]["code"] == "file_required"
     assert fac.get(a(graded, f"/{aid}")).json()["published"]["requires_file"] is False
+
+
+# ---------------- Classroom-style status counts, Missing and Done ----------------
+
+def counts_of(c, aid):
+    return next(x for x in c["fac"].get(a(c, "")).json() if x["id"] == aid)["counts"]
+
+
+def test_the_teacher_list_counts_turned_in_assigned_and_graded(graded):
+    aid = make_manual(graded, "activity", "Counted", points="10", category_key="activity", deadline=iso(24))
+    fac, st1, s1 = graded["fac"], graded["st1"], graded["students"][0]
+    assert counts_of(graded, aid) == {"total": 2, "graded": 0, "turned_in": 0, "assigned": 2, "to_return": 0}
+    assert submit_pdf(st1, graded, aid).status_code == 201
+    assert counts_of(graded, aid)["turned_in"] == 1 and counts_of(graded, aid)["assigned"] == 1
+    assert score(graded, aid, s1, 8).status_code == 200
+    assert counts_of(graded, aid)["to_return"] == 1                                  # scored but not returned yet
+    assert fac.post(a(graded, f"/{aid}/release"), {"student_ids": None}).status_code == 200
+    assert counts_of(graded, aid) == {"total": 2, "graded": 1, "turned_in": 0, "assigned": 1, "to_return": 0}
+    draft_only = create(graded, "activity", "Not published")["id"]
+    assert "counts" not in next(x for x in fac.get(a(graded, "")).json() if x["id"] == draft_only)
+
+
+def test_the_student_todo_lists_missing_and_done_work(db, graded):
+    st1 = graded["st1"]
+    gone = make_manual(graded, "activity", "Too late", points="10", category_key="activity", deadline=iso(24))
+    set_deadline(db, gone, past())                                                    # past due, late work not accepted
+    back = make_manual(graded, "activity", "Returned work", points="10", category_key="activity", deadline=iso(24))
+    assert submit_pdf(st1, graded, back).status_code == 201
+    assert score(graded, back, graded["students"][0], 8).status_code == 200
+    assert graded["fac"].post(a(graded, f"/{back}/release"), {"student_ids": None}).status_code == 200
+    page = st1.get("/api/dashboard/student/todo").json()
+    assert "Too late" in [w["title"] for w in page["missing"]]
+    assert "Too late" not in [w["title"] for w in page["todo"]]
+    done = {w["title"]: w for w in page["done"]}
+    assert done["Returned work"]["result"]["score"] == 8
+    assert "Returned work" not in [w["title"] for w in page["missing"]]
+
+
+def test_new_assessments_start_at_100_points_except_online_quizzes(graded):
+    assert create(graded, "activity", "Default points")["draft"]["max_points"] == 100
+    assert create(graded, "online_quiz", "Quiz points")["draft"]["max_points"] == 0

@@ -57,7 +57,7 @@ try{
   check('scheduled work is not in the student To-do or list until it opens',!text.includes('Scheduled activity')&&!studentList.includes('Scheduled activity'),studentList.join(','));
   check('the teacher still sees the scheduled activity in Classwork',(await call(page,'GET',`/teach/offerings/${O}/assessments`)).data.some(a=>a.published?.title==='Scheduled activity'));
   await S1.getByRole('link',{name:/^Missing/}).click();await S1.waitForLoadState('networkidle');
-  check('Missing explains itself (late work still accepted) or says the student is up to date',/late|up to date/.test(await S1.locator('main').innerText()));
+  check('Missing explains itself (past due and not turned in) or says the student is up to date',/past due|up to date/.test(await S1.locator('main').innerText()));
   await shot(S1,'todo-missing',false);
   check('axe finds no violations on the To-do page',(await axe(S1)).length===0);
 
@@ -97,6 +97,10 @@ try{
   await S1.getByRole('link',{name:'Reflection note',exact:true}).click();await S1.waitForLoadState('networkidle');
   await S1.getByRole('button',{name:'Mark as done'}).waitFor();
   check('the work page offers Mark as done and no file upload',await S1.getByRole('button',{name:'Mark as done'}).count()===1&&await S1.locator('input[type=file]').count()===0);
+  await S1.goto('/student');await S1.waitForLoadState('networkidle');await S1.getByRole('heading',{name:'Due soon'}).waitFor({timeout:8000}).catch(()=>{});      // while the work is still open
+  check('the student Home has a Due soon strip above the class cards',await S1.getByRole('heading',{name:'Due soon'}).count()===1);
+  check('axe finds no violations on the student Home',(await axe(S1)).length===0);
+  await S1.goBack();await S1.getByRole('button',{name:'Mark as done'}).waitFor();
   await S1.getByLabel('Private comment to your teacher').fill('Finished in class');
   await S1.getByRole('button',{name:'Mark as done'}).click();await S1.getByText('Marked as done. Your teacher can see it now.').first().waitFor();
   check('after marking it done the student sees it turned in and cannot do it twice',await S1.getByRole('button',{name:'Mark as done'}).count()===0&&(await S1.locator('aside[aria-label="Your work"]').innerText()).includes('Turned in'));
@@ -104,6 +108,33 @@ try{
   await rp.goto(`/faculty/offerings/${O}/assessments/${rid}/scores`);await rp.waitForLoadState('networkidle');await rp.waitForTimeout(500);
   check('the teacher sees the work as marked done, with the comment, and nothing to preview',(await rp.locator('.grade-sub').innerText()).includes('Marked as done')&&(await rp.locator('.grade-sub').innerText()).includes('Finished in class')&&await rp.locator('iframe.file-frame').count()===0);
   await shot(rp,'grading-marked-done',false);
+
+  // ---- F: the Classroom alignment round (student tabs, Your work, People, Due soon, counts, assignment page, Return selected, Collapse all)
+  await rp.goto(`/faculty/offerings/${O}/classwork`);await rp.waitForLoadState('networkidle');await rp.locator('.cw-main').first().waitFor();
+  const width=(await rp.locator('.cw-main').boundingBox()).width;
+  check('with a single topic group the work uses the full width (no empty right side)',width>600,String(Math.round(width)));
+  const row=rp.locator('li',{hasText:'Reflection note'}).first();
+  check('a teacher row shows Turned in, Assigned and Graded counts',(await row.locator('.row-counts').innerText()).replace(/\s+/g,' ').includes('1 Turned in'));
+  await rp.getByRole('button',{name:'Collapse all'}).click();
+  check('Collapse all folds the topics and Expand all brings them back',await rp.locator('ul.seq').count()===0&&await (async()=>{await rp.getByRole('button',{name:'Expand all'}).click();return (await rp.locator('ul.seq').count())>0})());
+  await row.getByRole('link',{name:'Reflection note',exact:true}).click();await rp.getByRole('heading',{name:'Reflection note',level:1}).waitFor();
+  check('a published row opens the assignment page with the status counts',(await rp.locator('.hub-stats').innerText()).replace(/\s+/g,' ').includes('1 Turned in'));
+  await rp.locator('.hub-stat',{hasText:'Turned in'}).click();await rp.waitForLoadState('networkidle');await rp.locator('.grade-student').first().waitFor();
+  check('the Turned in count opens the student work page on that group',(await rp.getByRole('button',{name:/^Turned in/}).getAttribute('aria-pressed'))==='true');
+  await rp.locator('.grade-student',{hasText:'Demo student 1'}).click();await rp.getByLabel(/^Points/).fill('9');await rp.getByRole('button',{name:/^Save/}).first().click();await rp.waitForTimeout(1500);
+  await rp.getByLabel('Select Demo student 1').check();
+  await rp.getByRole('button',{name:'Return 1 selected'}).click();await rp.getByText('Returned 1 result').first().waitFor();
+  check('Return selected returned only the ticked student',(await call(S1,'GET',`/learn/offerings/${O}/results`)).data.results.some(r=>r.title==='Reflection note'&&r.score===9));
+  await S1.goto(`/student/offerings/${O}/stream`);await S1.waitForLoadState('networkidle');
+  check('a student has the tabs Stream, Classwork and People, and no Grades tab',(await S1.getByRole('navigation',{name:'Subject sections'}).getByRole('link').allInnerTexts()).join(',')==='Stream,Classwork,People');
+  await S1.goto(`/student/offerings/${O}/people`);await S1.waitForLoadState('networkidle');
+  check('the student People tab shows the teacher and no classmates',(await S1.locator('main').innerText()).includes('Demo faculty 1')&&!(await S1.locator('main').innerText()).includes('Demo student 2'));
+  await S1.goto(`/student/offerings/${O}/classwork`);await S1.waitForLoadState('networkidle');await S1.getByRole('link',{name:'View your work'}).click();await S1.waitForURL(/\/your-work$/);
+  await S1.getByRole('button',{name:/^Returned with grade/}).click();
+  check('Your work lists the returned work with its grade',(await S1.locator('main').innerText()).includes('Reflection note')&&(await S1.locator('main').innerText()).includes('9.00 / 10.00'));
+  check('axe finds no violations on Your work',(await axe(S1)).length===0);
+  await rp.goto(`/faculty/offerings/${O}/assessments/${rid}`);await rp.waitForLoadState('networkidle');
+  check('axe finds no violations on the assignment page',(await axe(rp)).length===0);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

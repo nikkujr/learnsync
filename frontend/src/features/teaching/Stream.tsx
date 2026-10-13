@@ -21,13 +21,13 @@ export function FacultyStream(){
   const base=`/faculty/offerings/${offering.id}`;
   const recent=[
     ...(items.data??[]).filter(i=>i.published&&!i.archived).map(i=>({key:'i'+i.id,title:itemTitle(i),kind:KIND[i.kind],at:i.published!.published_at!,to:`${base}/content/${i.id}/edit`})),
-    ...(assessments.data??[]).filter(a=>a.published&&!a.archived).map(a=>({key:'a'+a.id,title:assessmentTitle(a),kind:KIND[a.kind],at:a.published!.published_at!,to:`${base}/assessments/${a.id}/scores`})),
+    ...(assessments.data??[]).filter(a=>a.published&&!a.archived).map(a=>({key:'a'+a.id,title:assessmentTitle(a),kind:KIND[a.kind],at:a.published!.published_at!,to:`${base}/assessments/${a.id}`})),
   ].filter(r=>r.at).sort((a,b)=>a.at<b.at?1:-1).slice(0,6);
   const soon=(assessments.data??[]).filter(a=>a.published&&!a.archived&&a.published.deadline&&Date.parse(a.published.deadline)>Date.now())
     .sort((a,b)=>a.published!.deadline!<b.published!.deadline!?-1:1).slice(0,3);
   return <div className="stream">
     <aside className="stream-side" aria-label="Upcoming"><section className="panel"><h2>Upcoming</h2>
-      {soon.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{soon.map(a=><li key={a.id}><Link to={`${base}/assessments/${a.id}/scores`}>{assessmentTitle(a)}</Link><span className="muted">Due {day(a.published!.deadline!)}</span></li>)}</ul>}</section></aside>
+      {soon.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{soon.map(a=><li key={a.id}><Link to={`${base}/assessments/${a.id}`}>{assessmentTitle(a)}</Link><span className="muted">Due {day(a.published!.deadline!)}</span></li>)}</ul>}</section></aside>
     <div className="stream-feed">
       <FacultyAnnouncements/>
       {recent.map(r=><article className="panel post" key={r.key}><span className="post-icon" aria-hidden="true">{ICON[r.kind]??'▤'}</span>

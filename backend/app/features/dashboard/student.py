@@ -47,8 +47,8 @@ def week_strip(db, student):
 
 
 def work_buckets(db, student, offering, enrollment, subject):
-    """(to do, awaiting feedback, another attempt) for one offering, from the learner's own view of it."""
-    todo, waiting, again = [], [], []
+    """(to do, awaiting feedback, another attempt, missing, done) for one offering, from the learner's own view of it."""
+    todo, waiting, again, missing, done = [], [], [], [], []
     for w in learner.listing(db, student, offering, enrollment):
         base = {"offering_id": offering.id, "assessment_id": w["id"], "kind": w["kind"], "title": w["title"],
                 "subject": subject.code, "deadline": w["deadline"], "available_from": w["available_from"],
@@ -60,7 +60,12 @@ def work_buckets(db, student, offering, enrollment, subject):
             todo.append({**base, "state": w["state"]})
         elif bucket == "awaiting":
             waiting.append(base)
-    return todo, waiting, again
+        elif bucket == "closed":                  # past due, nothing handed in, late work not accepted: it cannot be done any more
+            missing.append(base)
+        elif bucket == "done":                    # returned (a released result) or a finished quiz
+            result = w["result"]
+            done.append({**base, "result": {"score": result["score"], "max_points": result["max_points"]} if result else None})
+    return todo, waiting, again, missing, done
 
 
 def updates_for(db, student, offering, enrollment, subject):
@@ -97,13 +102,17 @@ def sort_todo(todo):
 
 def student_todo(db, student):
     """Every open item across the student's current subjects (the dashboard only shows the first few)."""
-    todo, waiting, again = [], [], []
+    todo, waiting, again, missing, done = [], [], [], [], []
     for enrollment, offering, subject in current_enrollments(db, student):
-        t, w, a = work_buckets(db, student, offering, enrollment, subject)
+        t, w, a, m, d = work_buckets(db, student, offering, enrollment, subject)
         todo += t
         waiting += w
         again += a
-    return {"todo": sort_todo(todo), "awaiting_feedback": waiting, "another_attempt": again}
+        missing += m
+        done += d
+    by_deadline = lambda x: (x["deadline"] is None, x["deadline"] or 0)
+    return {"todo": sort_todo(todo), "awaiting_feedback": waiting, "another_attempt": again,
+            "missing": sorted(missing, key=by_deadline, reverse=True)[:50], "done": done[:50]}
 
 
 def student_dashboard(db, student):
@@ -111,7 +120,7 @@ def student_dashboard(db, student):
     next_lesson = None
     for enrollment, offering, subject in current_enrollments(db, student):
         summary = progress.summary(db, offering, enrollment, student.id)
-        t, w, a = work_buckets(db, student, offering, enrollment, subject)
+        t, w, a, _, _ = work_buckets(db, student, offering, enrollment, subject)
         todo += t
         waiting += w
         again += a

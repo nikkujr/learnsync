@@ -62,3 +62,9 @@ No new endpoint: `PUT /api/teach/offerings/{id}/attendance` has always been a PA
 - `assessment_revision.requires_file` (default true) and a nullable `activity_submission.file_id` (migration `a1c5d7e93b21`). `POST /api/learn/offerings/{id}/assessments/{aid}/mark-done` (student, body `{note}`) records one submission with no file when the activity does not require one; a file upload to such an activity answers 422 `no_file_needed`, a mark-done on an ordinary activity 422 `file_required`, a second mark-done 409 `already_done`. Submission views carry `marked_done` and a null `file`.
 - `learner.scheduled(rev)`: a published quiz or activity whose `available_from` is in the future does not exist for students (`listing`, `student_assessment`, the To-do and the dashboard all go through those), so a direct address answers 404. Teachers' lists are unchanged.
 - `GET /api/files/{id}/preview` also serves a submitted PDF to its owner and the assigned teacher (same access as the download).
+
+## Classroom alignment round (2026-10-13)
+- `GET /api/teach/offerings/{id}/assessments` adds `counts` (`total, graded, turned_in, assigned, to_return`) to each published, unarchived item (`assessments/status.py`). Turned in = handed in (activity submission or submitted quiz attempt) and not yet returned; Graded = has a released result; Assigned = none of handed in, scored or released; To return = scored but never released.
+- `GET /api/dashboard/student/todo` adds `missing` (closed bucket: past due, nothing handed in, late work not accepted) and `done` (returned or finished work, with `result`).
+- Gradebook columns carry `deadline`; activity cells carry `turned_in`.
+- New assessments other than online quizzes start at 100 points.

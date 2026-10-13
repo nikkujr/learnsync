@@ -19,6 +19,7 @@ from app.features.teaching.access import targeted
 
 from .definitions import revision
 from .models import (
+    ActivitySubmission,
     Assessment,
     AssessmentScore,
     AssessmentSection,
@@ -227,12 +228,15 @@ def gradebook(db, offering):
             .where(Assessment.offering_id == offering.id)
             .order_by(ResultPublication.release_number)):
         released[(r.assessment_id, r.student_id)] = r
+    turned_in = {(r[0], r[1]) for r in db.execute(select(ActivitySubmission.assessment_id, ActivitySubmission.student_id).join(
+        Assessment, Assessment.id == ActivitySubmission.assessment_id).where(Assessment.offering_id == offering.id).distinct())}
     published, flags = latest_grade_rows(db, offering.id), review_flags(db, offering.id)
     sections = {s.id: s.name for s in db.scalars(select(Section).where(
         Section.term_id == offering.term_id))}
     columns = [{"id": a.id, "kind": a.kind, "title": rev.title, "category_key": rev.category_key,
                 "period": rev.period, "max_points": rev.max_points,
-                "include_in_grade": rev.include_in_grade, "section_ids": sorted(secs, key=str)}
+                "include_in_grade": rev.include_in_grade, "deadline": rev.deadline,
+                "section_ids": sorted(secs, key=str)}
                for a, rev, secs in ctx.assessments]
     rows = []
     for enrollment, account in ctx.enrollments:
@@ -253,6 +257,8 @@ def gradebook(db, offering):
             if a.kind == "online_quiz":
                 cells[str(a.id)]["attempt_state"] = ctx.attempt_states.get(
                     (a.id, account.id), "not_attempted")
+            elif a.kind == "activity":
+                cells[str(a.id)]["turned_in"] = (a.id, account.id) in turned_in
         grades = student_grades(ctx, enrollment)
         rows.append({
             "student_id": account.id, "display_name": account.display_name,

@@ -1,6 +1,6 @@
 import {useToast} from '../../components/undo';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
-import {Link,useOutletContext,useParams} from 'react-router-dom';
+import {Link,useOutletContext,useParams,useSearchParams} from 'react-router-dom';
 import {useQuery,type UseQueryResult} from '@tanstack/react-query';
 import {api,post,send,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
@@ -58,9 +58,23 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
   const [permission,setPermission]=useState<ScoreRow|null>(null);
   const [ungradedOnly,setUngradedOnly]=useState(false);
   const [selected,setSelected]=useState<string|null>(null);
+  const toast=useToast();const [params]=useSearchParams();
+  type Group='all'|'turned_in'|'assigned'|'graded';
+  const [group,setGroup]=useState<Group>(()=>{const g=params.get('status');return g==='turned_in'||g==='assigned'||g==='graded'?g:'all'});
+  const [ticked,setTicked]=useState<Set<string>>(new Set());
   const focusScore=useRef(false);                       // set when Save and next moves on, so the next student's score box takes focus
   const ungraded=(r:ScoreRow)=>r.score===null||r.new_version_since_grading;
-  const shown=ungradedOnly?rows.filter(ungraded):rows;
+  // Classroom's groups: Graded = returned, Assigned = nothing handed in or scored, Turned in = everything between (work in, or a score not returned yet)
+  const groupOf=(r:ScoreRow):Group=>r.score!==null&&!r.to_return&&!r.new_version_since_grading?'graded':r.score===null&&!(kind==='activity'&&r.latest)?'assigned':'turned_in';
+  const inGroup=(r:ScoreRow)=>group==='all'||groupOf(r)===group;
+  const shown=rows.filter(r=>inGroup(r)&&(!ungradedOnly||ungraded(r)));
+  const groupCount=(g:Group)=>rows.filter(r=>g==='all'||groupOf(r)===g).length;
+  const returnable=rows.filter(r=>ticked.has(r.student_id)&&r.to_return);
+  const tick=(id:string,on:boolean)=>setTicked(prev=>{const n=new Set(prev);if(on)n.add(id);else n.delete(id);return n});
+  async function returnTicked(){
+    try{const r=await post<{released:number}>(`${base}/release`,{student_ids:returnable.map(x=>x.student_id)});const text=r.released===0?'Nothing new to return.':`Returned ${r.released} result${r.released===1?'':'s'}.`;setMessage(text);toast(text);setTicked(new Set());await onSaved()}
+    catch(e){setMessage(errorText(e))}
+  }
   const row=rows.find(r=>r.student_id===selected)??shown[0]??rows[0];
   const status=(r:ScoreRow)=>!ungraded(r)?`${fmt(r.score)} / ${fmt(max)}`:r.score!==null?'Resubmitted':kind==='activity'?(r.latest?'Turned in':'Assigned'):'Not scored';
   if(rows.length===0)return <section className="panel"><h3>{heading}</h3><p className="muted">No students to show.</p></section>;
@@ -69,10 +83,13 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
   return <section className="panel" aria-label={heading}><h3>{heading}</h3>
     {kind==='online_quiz'&&<p className="muted">A student who never attempted this quiz has no score yet. Record one (zero is a real score) so their grade can be calculated.</p>}
     <div className="grading">
-      <div className="grade-list"><label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>
+      <div className="grade-list"><nav className="type-tabs" aria-label="Student work status">{([['all','All'],['turned_in','Turned in'],['assigned','Assigned'],['graded','Graded']] as const).map(([k,l])=><button key={k} type="button" className={group===k?'active':''} aria-pressed={group===k} onClick={()=>setGroup(k)}>{l}<span className="muted tab-count">{groupCount(k)}</span></button>)}</nav>
+        <div className="actions"><label className="inline"><input type="checkbox" checked={shown.length>0&&shown.every(r=>ticked.has(r.student_id))} onChange={e=>setTicked(e.target.checked?new Set(shown.map(r=>r.student_id)):new Set())}/> Select all</label>
+          <button type="button" className={returnable.length>0?'primary':''} disabled={closed||returnable.length===0} onClick={returnTicked}>{returnable.length>0?`Return ${returnable.length} selected`:'Return selected'}</button></div>
+        <label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>
         <p className="muted">{rows.filter(ungraded).length} of {rows.length} still ungraded.</p>
         {shown.length===0&&<p className="muted">Everyone listed has a score.</p>}
-        <ul className="plain" aria-label="Students">{shown.map(r=><li key={r.student_id}><button type="button" className={'grade-student'+(r.student_id===row?.student_id?' on':'')} aria-pressed={r.student_id===row?.student_id} onClick={()=>setSelected(r.student_id)}>
+        <ul className="plain" aria-label="Students">{shown.map(r=><li key={r.student_id}><input type="checkbox" className="tick" aria-label={`Select ${r.student}`} checked={ticked.has(r.student_id)} onChange={e=>tick(r.student_id,e.target.checked)}/><button type="button" className={'grade-student'+(r.student_id===row?.student_id?' on':'')} aria-pressed={r.student_id===row?.student_id} onClick={()=>setSelected(r.student_id)}>
           <span className="avatar" aria-hidden="true">{initialsOf(r.student)}</span><span className="who"><strong>{r.student}</strong><span className="muted">{status(r)}{r.latest?.is_late?' · late':''}</span></span></button></li>)}</ul></div>
       {row&&<GradePanel key={row.student_id+row.score_revision} row={row} kind={kind} base={base} max={max} closed={closed} onSaved={onSaved} setMessage={setMessage} onPermission={()=>setPermission(row)} focusOnMount={focusScore.current}
         hasNext={!!nextId} onDone={advance=>{const now=current();setMessage(`Saved ${row.student}. ${now.filter(ungraded).length} of ${now.length} still need grading.`);focusScore.current=advance&&!!nextId;if(advance&&nextId)setSelected(nextId);else if(advance)document.getElementById('ungraded-only')?.focus()}}/>}

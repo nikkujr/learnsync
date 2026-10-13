@@ -102,6 +102,6 @@ export function StudentSubjects(){
           meta={s.enrollment_status==='withdrawn'?'Withdrawn':s.term_status==='closed'?'Past term':undefined}
           detail={active?`${s.subject.units} units`:'Course content is no longer available, but you can still see your own results.'}
           to={active?`${o}/stream`:`${o}/results`}
-          links={active?[['Classwork',`${o}/classwork`],['Grades',`${o}/results`]]:[['Results',`${o}/results`]]}/>})}</div>}
+          links={active?[['Classwork',`${o}/classwork`],['Your work',`${o}/your-work`]]:[['Results',`${o}/results`]]}/>})}</div>}
   </>;
 }

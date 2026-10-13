@@ -15,7 +15,7 @@ try{
   const studentState=await sessionFor(browser,'student1@example.com');   // one sign-in per account: the limiter allows 5 a minute
   const stu=await newPage(browser,{state:studentState});
   await stu.goto('/student');await stu.getByRole('heading',{name:'Home'}).waitFor();await stu.waitForLoadState('networkidle');
-  const todo=stu.locator('.dash-side .rows a').first();
+  const todo=stu.locator('.soon-list a').first();      // the Due soon strip holds the open work
   if(await todo.count()){
     await todo.click();await stu.waitForURL(/\/work\//);
     check('a to-do opened from the dashboard says it goes back to the Dashboard',await says(stu,/Back to Home/));
@@ -33,10 +33,11 @@ try{
   check('and that Back lands on Classwork',/\/classwork/.test(path(stu)));
   // subject card -> Progress tab is a tab, but a card's lesson link carries the origin too
   await stu.goto('/student/subjects');await stu.waitForLoadState('networkidle');
-  await stu.locator('.class-foot').getByRole('link',{name:'Grades'}).first().click();await stu.waitForURL(/\/results$/);
+  await stu.locator('.class-foot').getByRole('link',{name:'Your work'}).first().click();await stu.waitForURL(/\/your-work$/);
+  await stu.getByRole('link',{name:'Grades and released results in detail'}).click();await stu.waitForURL(/\/results$/);
   await stu.getByRole('heading',{name:'Published grades'}).waitFor();await stu.getByRole('heading',{name:'Released assessment results'}).waitFor();
   check('the subject card links to "Grades & results" and the page uses both headings',true);
-  check('the subject tab is called "Grades"',await stu.getByRole('navigation',{name:'Subject sections'}).getByRole('link',{name:'Grades',exact:true}).count()===1);
+  check('a student has the tabs Stream, Classwork and People, and no Grades tab',(await stu.getByRole('navigation',{name:'Subject sections'}).getByRole('link').allInnerTexts()).join(',')==='Stream,Classwork,People');
 
   // ---- faculty: dashboard task -> scores page -> Back to the dashboard; direct link -> Assessments
   const fac=await newPage(browser,{state:await sessionFor(browser,'faculty1@example.com')});

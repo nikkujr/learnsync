@@ -61,7 +61,7 @@ try{
   // ---- student: old addresses and pills
   const stu=await newPage(browser,{state:S,width:1280,height:900});
   const learn=[[`${sb}/lessons`,`${sb}/classwork`,'Classwork'],[`${sb}/work`,`${sb}/classwork?type=quiz`,'Classwork'],[`${sb}/announcements`,`${sb}/stream`,'Stream'],
-    [`${sb}/grades`,`${sb}/results`,'Grades'],[`${sb}/progress`,`${sb}/progress`,'Grades'],[`${sb}/syllabus`,`${sb}/syllabus`,'Classwork']];
+    [`${sb}/grades`,`${sb}/your-work`,'Classwork'],[`${sb}/progress`,`${sb}/progress`,'Classwork'],[`${sb}/people`,`${sb}/people`,'People'],[`${sb}/syllabus`,`${sb}/syllabus`,'Classwork']];
   for(const [from,to,tab] of learn){await stu.goto(from);await stu.waitForLoadState('networkidle');
     const label=await activeTab(stu).catch(()=>'(none)');
     check(`student ${from.replace(sb,'.')} lands on ${to.replace(sb,'.')} under the ${tab} tab`,where(stu)===to&&label===tab,`${where(stu).replace(sb,'.')} / ${label}`)}
