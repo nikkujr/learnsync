@@ -160,8 +160,8 @@ function TopicNav<T>({tree}:{tree:TNode<T>[]}){
   const to=(id:string|null)=>{const q=new URLSearchParams(params);if(id)q.set('topic',id);else q.delete('topic');const text=q.toString();return text?`?${text}`:'?'};
   if(tree.length<2)return null;
   const known=tree.some(n=>n.id===current);
-  return <nav className="topic-nav" aria-label="Topics"><Link to={to(null)} replace className={!known?'active':undefined} aria-current={!known?'page':undefined}>All topics</Link>
-    {tree.map(n=><Link key={n.id} to={to(n.id)} replace className={n.id===current?'active':undefined} aria-current={n.id===current?'page':undefined}>{n.title}<span className="tab-count">{total(n)}</span></Link>)}</nav>;
+  return <nav className="topic-nav" aria-label="Topics"><Link to={to(null)} replace className={!known?'active':undefined} aria-current={!known?'page':undefined}><span className="t">All topics</span></Link>
+    {tree.map(n=><Link key={n.id} to={to(n.id)} replace title={n.title} className={n.id===current?'active':undefined} aria-current={n.id===current?'page':undefined}><span className="t">{n.title}</span><span className="tab-count">{total(n)}</span></Link>)}</nav>;
 }
 const idsOf=<T,>(tree:TNode<T>[]):string[]=>tree.flatMap(n=>[n.id,...idsOf(n.kids)]);
 /** Which topics are folded, and the two buttons that fold or unfold all of them. */
@@ -171,7 +171,7 @@ function useFolds(){
   return {folded,fold,setFolded};
 }
 function FoldBar<T>({tree,setFolded}:{tree:TNode<T>[];setFolded:(s:Set<string>)=>void}){
-  return tree.length>0?<p className="fold-all"><button type="button" className="linklike" onClick={()=>setFolded(new Set(idsOf(tree)))}>Collapse all</button><button type="button" className="linklike" onClick={()=>setFolded(new Set())}>Expand all</button></p>:null;
+  return idsOf(tree).length>1?<p className="fold-all"><button type="button" className="linklike" onClick={()=>setFolded(new Set(idsOf(tree)))}>Collapse all</button><button type="button" className="linklike" onClick={()=>setFolded(new Set())}>Expand all</button></p>:null;
 }
 /** The branches to show: the chosen topic, or all of them when none (or a topic that no longer has anything) is chosen. */
 const inTopic=<T,>(tree:TNode<T>[],topic:string|null)=>topic&&tree.some(n=>n.id===topic)?tree.filter(n=>n.id===topic):tree;

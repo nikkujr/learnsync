@@ -256,10 +256,21 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .grade-list li{display:flex;align-items:center;gap:4px}
 .grade-list li .grade-student{flex:1;min-width:0}
 .grade-list input.tick{width:22px;height:22px;min-height:0;flex:none;margin:0 4px}
-.grade-list .type-tabs{margin:0 0 8px}
-.grade-list .type-tabs button{min-height:44px;padding:4px 12px}
 .gradebook .cell-missing{color:var(--danger)}
 .gradebook .cell-turned,.gradebook .cell-draft{color:var(--success)}
 .gradebook .tone-text{font-size:.78rem;font-weight:600}
 .link-row{display:flex;flex-wrap:wrap;gap:0 24px;margin-top:16px}
 .link-row a{display:inline-flex;align-items:center;min-height:44px}
+/* topic list: roomier, titles on at most two lines, the count in its own column */
+.topic-nav a{align-items:flex-start;padding:10px 12px;gap:12px}
+.topic-nav a .t{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.3;font-size:.92rem}
+.topic-nav a .tab-count{flex:none;margin:0;color:var(--muted);font-size:.85rem;padding-top:1px}
+.topic-nav a.active .tab-count{color:inherit}
+@media(min-width:900px){.cw-layout:has(>.topic-nav){grid-template-columns:272px minmax(0,1fr)}.topic-nav a{border-radius:0 24px 24px 0}.topic-nav{gap:2px}}
+/* student work page: the status chips sit in one row above the list and the work */
+.panel>.type-tabs{margin:8px 0 12px}
+.grade-list .actions{margin:4px 0;gap:8px 12px}
+.grade-list>.inline{margin:4px 0}
+.panel>.type-tabs{gap:6px}
+.panel>.type-tabs button{padding:4px 10px;font-size:.9rem}
+.panel>.type-tabs .tab-count{margin-left:4px}

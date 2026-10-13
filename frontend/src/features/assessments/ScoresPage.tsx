@@ -82,8 +82,9 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
   const nextId=at>=0?shown[at+1]?.student_id:undefined;
   return <section className="panel" aria-label={heading}><h3>{heading}</h3>
     {kind==='online_quiz'&&<p className="muted">A student who never attempted this quiz has no score yet. Record one (zero is a real score) so their grade can be calculated.</p>}
+    <nav className="type-tabs" aria-label="Student work status">{([['all','All'],['turned_in','Turned in'],['assigned','Assigned'],['graded','Graded']] as const).map(([k,l])=><button key={k} type="button" className={group===k?'active':''} aria-pressed={group===k} onClick={()=>setGroup(k)}>{l}<span className="muted tab-count">{groupCount(k)}</span></button>)}</nav>
     <div className="grading">
-      <div className="grade-list"><nav className="type-tabs" aria-label="Student work status">{([['all','All'],['turned_in','Turned in'],['assigned','Assigned'],['graded','Graded']] as const).map(([k,l])=><button key={k} type="button" className={group===k?'active':''} aria-pressed={group===k} onClick={()=>setGroup(k)}>{l}<span className="muted tab-count">{groupCount(k)}</span></button>)}</nav>
+      <div className="grade-list">
         <div className="actions"><label className="inline"><input type="checkbox" checked={shown.length>0&&shown.every(r=>ticked.has(r.student_id))} onChange={e=>setTicked(e.target.checked?new Set(shown.map(r=>r.student_id)):new Set())}/> Select all</label>
           <button type="button" className={returnable.length>0?'primary':''} disabled={closed||returnable.length===0} onClick={returnTicked}>{returnable.length>0?`Return ${returnable.length} selected`:'Return selected'}</button></div>
         <label className="inline"><input id="ungraded-only" type="checkbox" checked={ungradedOnly} onChange={e=>setUngradedOnly(e.target.checked)}/> Show ungraded only</label>

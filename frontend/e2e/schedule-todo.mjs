@@ -115,8 +115,7 @@ try{
   check('with a single topic group the work uses the full width (no empty right side)',width>600,String(Math.round(width)));
   const row=rp.locator('li',{hasText:'Reflection note'}).first();
   check('a teacher row shows Turned in, Assigned and Graded counts',(await row.locator('.row-counts').innerText()).replace(/\s+/g,' ').includes('1 Turned in'));
-  await rp.getByRole('button',{name:'Collapse all'}).click();
-  check('Collapse all folds the topics and Expand all brings them back',await rp.locator('ul.seq').count()===0&&await (async()=>{await rp.getByRole('button',{name:'Expand all'}).click();return (await rp.locator('ul.seq').count())>0})());
+  check('with one topic group there is no Collapse all row (it would only leave a blank gap)',await rp.getByRole('button',{name:'Collapse all'}).count()===0);
   await row.getByRole('link',{name:'Reflection note',exact:true}).click();await rp.getByRole('heading',{name:'Reflection note',level:1}).waitFor();
   check('a published row opens the assignment page with the status counts',(await rp.locator('.hub-stats').innerText()).replace(/\s+/g,' ').includes('1 Turned in'));
   await rp.locator('.hub-stat',{hasText:'Turned in'}).click();await rp.waitForLoadState('networkidle');await rp.locator('.grade-student').first().waitFor();
