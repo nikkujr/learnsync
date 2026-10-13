@@ -1,6 +1,6 @@
 # Design system
 
-Use reference/dashboard-prototype.html Variant A as a visual reference. Preserve its navy/blue palette, but implement actual routes and permissions. Product navigation must omit demo role/variant switches.
+**Visual baseline (changed 2026-10-13, see DECISIONS.md): Google Classroom's look and flow** (white top bar, light drawer, class-card home, banner and Stream/Classwork/People/Grades tabs, blue accent). The old Variant A navy sidebar in reference/dashboard-prototype.html is retired as a visual reference. Implement actual routes and permissions; product navigation must omit demo role/variant switches.
 
 Use semantic CSS variables, system/light/dark themes, base mobile layouts, 640px small and 1024px desktop navigation breakpoints. Verify keyboard focus, contrast, 44px targets and no whole-page horizontal overflow.
 
