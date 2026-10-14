@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {Link,useLocation,useNavigate,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -20,7 +21,7 @@ function useWork(offeringId:string){
 export function WorkList(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const query=useWork(offering.id);
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   if(query.data.length===0)return <section className="panel"><h2>No quizzes or activities yet</h2><p>Published quizzes and activities appear here.</p></section>;
   const first=query.data.find(i=>i.bucket==='todo');   // sorted by deadline, so this is the nearest
@@ -59,7 +60,7 @@ export function WorkDetail(){
   const [busy,setBusy]=useState(false);
   const base=`/student/offerings/${offering.id}/work`;
   const origin=useOrigin(`/student/offerings/${offering.id}/classwork`,'Classwork');const carried=useLocation().state;const toast=useToast();
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   const item=query.data?.find(i=>i.id===assessmentId);
   if(!item)return <section className="panel"><h2>Not available</h2><Link to={`/student/offerings/${offering.id}/classwork`}>Back to classwork</Link></section>;
 
@@ -133,7 +134,7 @@ export function AttemptPage(){
   const base=`/student/offerings/${offering.id}/work`;
   const url=`/learn/offerings/${offering.id}/attempts/${attemptId}`;
   const query=useQuery({queryKey:['attempt',attemptId],queryFn:()=>api<AttemptView>(url),staleTime:Infinity});
-  if(query.isPending)return <p>Loading your attempt…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error||!query.data)return <section className="panel"><h2>Attempt not available</h2><p role="alert">{query.error?.message}</p><Link to={`${base}/${assessmentId}`}>Back to the quiz</Link></section>;
   if(query.data.state==='submitted')return <Finished attempt={query.data} back={`${base}/${assessmentId}`}/>;
   return <Taking offering={offering} attempt={query.data} url={url} back={`${base}/${assessmentId}`}/>;

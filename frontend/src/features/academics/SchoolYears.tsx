@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState,type FormEvent} from 'react';
 import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -27,7 +28,7 @@ export function SchoolYears(){
       <button className="primary" onClick={()=>{setMessage('');setCreating(true)}}>New school year</button>
     </div>
     {message&&<p role="status">{message}</p>}
-    {years.isPending?<p>Loading…</p>:years.error?<p role="alert">{years.error.message}</p>:
+    {years.isPending?<Loading/>:years.error?<p role="alert">{years.error.message}</p>:
       years.data.length===0?<section className="panel"><h2>No school year yet</h2><p>Create the first school year to begin.</p></section>:
       years.data.map(year=><section className="panel" key={year.id}>
         <h2>{year.label}</h2><p className="muted">{year.start_date} to {year.end_date}</p>

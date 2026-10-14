@@ -1,3 +1,5 @@
+import {Empty} from '../../components/Empty';
+import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useState,type FormEvent} from 'react';
 import {Link,useParams} from 'react-router-dom';
@@ -35,7 +37,7 @@ export function TermWorkspace(){
     {done:haveStudents,label:'Place the students',detail:haveStudents?`${offerings.data!.reduce((n,o)=>n+o.enrolled,0)} enrollments`:'Import a list, or add students to a section.',action:<Link className="button primary" to={`/admin/terms/${termId}/import-students`}>Import students</Link>},
   ];
   const nextStep=steps.findIndex(x=>!x.done);
-  if(years.isPending)return <p>Loading…</p>;
+  if(years.isPending)return <Loading/>;
   if(!term)return <section className="panel"><h1>Term not found</h1><Link to="/admin/academics">Back to school years</Link></section>;
   return <>
     <p className="back"><Link to="/admin/academics">← School years</Link></p>
@@ -55,8 +57,8 @@ export function TermWorkspace(){
 
     <section className="panel">
       <div className="page-heading"><h2>Sections</h2><button disabled={closed} onClick={()=>setDialog('section')}>Add section</button></div>
-      {sections.isPending?<p>Loading…</p>:sections.error?<p role="alert">{sections.error.message}</p>:
-        sections.data.length===0?<p className="muted">No sections yet. Add one, or copy structure when creating the school year.</p>:
+      {sections.isPending?<Loading/>:sections.error?<p role="alert">{sections.error.message}</p>:
+        sections.data.length===0?<Empty icon="people" title="No sections yet">Sections are the groups of students, such as BSE 1-A.</Empty>:
         <div className="table-wrap"><table><caption className="sr-only">Sections of this term</caption>
           <thead><tr><th scope="col">Section</th><th scope="col">Year level</th><th scope="col">Students</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>{sections.data.map(s=><tr key={s.id}><th scope="row"><Link state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{s.name}</Link></th><td>{yearLabel(s.year_level)}</td><td>{s.member_count}</td>
@@ -65,8 +67,8 @@ export function TermWorkspace(){
 
     <section className="panel">
       <div className="page-heading"><h2>Offerings</h2><button disabled={closed||!sections.data} onClick={()=>setDialog('offering')}>Assign subjects</button></div>
-      {offerings.isPending?<p>Loading…</p>:offerings.error?<p role="alert">{offerings.error.message}</p>:
-        offerings.data.length===0?<p className="muted">No subjects are assigned yet.</p>:
+      {offerings.isPending?<Loading/>:offerings.error?<p role="alert">{offerings.error.message}</p>:
+        offerings.data.length===0?<Empty icon="book" title="No subjects assigned yet">Assign subjects to teachers, with the sections that take them.</Empty>:
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Offerings"><table><thead><tr><th>Subject</th><th>Teacher</th><th>Sections</th><th>Enrolled</th><th><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>{offerings.data.map(o=><tr key={o.id}>
             <td><Link state={here} to={`/admin/offerings/${o.id}`}><strong>{o.subject.code}</strong>{' '}{o.subject.title}</Link></td><td>{o.faculty.display_name}</td>
@@ -163,7 +165,7 @@ function BulkAssignDialog({termId,termSequence,sections,existing,onClose,onDone}
     <fieldset className="bulk-subjects"><legend>Subjects and the sections taking each</legend>
       {sections.length===0&&<p className="muted">Add sections first.</p>}
       <label>Filter subjects<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Code or title"/></label>
-      {subjects.isPending?<p>Loading subjects…</p>:<ul className="pick-list" aria-label="Subjects">{list.map(sub=>{
+      {subjects.isPending?<Loading/>:<ul className="pick-list" aria-label="Subjects">{list.map(sub=>{
         const on=pick[sub.id]!==undefined,done=taken.has(sub.id);
         return <li key={sub.id} className={on?'on':''}>
           <label className="inline"><input type="checkbox" checked={on} disabled={!facultyId||done} onChange={e=>toggleSubject(sub,e.target.checked)}/>

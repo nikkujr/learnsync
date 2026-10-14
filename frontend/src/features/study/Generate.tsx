@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState,type FormEvent} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {api,post,errorText} from '../../app/api';
@@ -30,7 +31,7 @@ export function GenerateDialog({offering,onClose,onCreated}:{offering:OfferingSu
     <p className="muted">The text of the materials you choose is sent to the AI provider. No student names, grades or answers are sent. The result is only a <strong>draft</strong>: you must read every question and mark it reviewed before it can be published.</p>
     <label>Quiz title<input name="title" required maxLength={200} defaultValue="Practice quiz"/></label>
     <fieldset><legend>Based on (published lessons and files with readable text)</legend>
-      {items.isPending?<p>Loading…</p>:sources.length===0?<p className="muted">Publish a lesson or a file with readable text first. Links need approved text, and scanned PDFs cannot be used.</p>:
+      {items.isPending?<Loading/>:sources.length===0?<p className="muted">Publish a lesson or a file with readable text first. Links need approved text, and scanned PDFs cannot be used.</p>:
         sources.map(i=><label className="inline" key={i.id}><input type="checkbox" checked={chosen.includes(i.id)} onChange={e=>setChosen(e.target.checked?[...chosen,i.id]:chosen.filter(x=>x!==i.id))}/> {i.published!.title} <span className="muted">({i.kind})</span></label>)}</fieldset>
     <div className="grid-2"><label>Multiple choice<input name="mc" type="number" min="0" max="30" defaultValue="3"/></label><label>True / false<input name="tf" type="number" min="0" max="30" defaultValue="2"/></label>
       <label>Short answer<input name="sa" type="number" min="0" max="30" defaultValue="1"/></label><label>Points per question<input name="points" type="number" min="0.5" step="0.5" defaultValue="1"/></label></div>

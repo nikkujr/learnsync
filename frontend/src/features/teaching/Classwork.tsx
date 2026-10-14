@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Icon} from '../../components/Icon';
 import type React from 'react';
 import {useEffect,useRef,useState} from 'react';
@@ -167,7 +168,7 @@ export function FacultyClasswork(){
     <details className="more"><summary>Search and archived</summary><div className="actions"><label>Search<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Title"/></label>
       <label className="inline"><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived</label></div></details>
     {moved&&<p role="status" className="muted">{moved}</p>}
-    {(items.isPending||assessments.isPending)?<p>Loading…</p>:items.error||assessments.error?<p role="alert">{(items.error??assessments.error)!.message}</p>:
+    {(items.isPending||assessments.isPending)?<Loading/>:items.error||assessments.error?<p role="alert">{(items.error??assessments.error)!.message}</p>:
       tree.length===0?<section className="panel"><h2>{search||status!=='all'?'Nothing matches':`No ${label.toLowerCase()} yet`}</h2><p>{search||status!=='all'?'Change the search or the filter.':'Use Create to add one.'}</p></section>:
       <>
       {stranded&&<p className="warn" role="status">Items cannot be reordered because some are attached to a topic that is no longer in the syllabus. <Link to={stranded.to}>Open “{stranded.title}”</Link> and choose a current topic.</p>}
@@ -266,7 +267,7 @@ export function StudentClasswork(){
   const [filters,setFilters]=useState<Record<string,Filter>>({});const filter=filters[cat]??'all';      // each tab remembers its own filter
   const setFilter=(f:Filter)=>setFilters({...filters,[cat]:f});
   const error=items.error??work.error;if(error)return <p role="alert">{error.message}</p>;
-  if(!items.data||!work.data)return <p>Loading…</p>;
+  if(!items.data||!work.data)return <Loading/>;
   const nearest=work.data.find(w=>w.bucket==='todo');                // sorted by deadline, so this is the nearest
   const lessons=items.data;const finished=lessons.filter(i=>i.completed).length;      // lessons, files and links are one sequence
   const next=items.data.find(i=>i.up_next);

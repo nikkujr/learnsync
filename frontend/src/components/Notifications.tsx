@@ -1,3 +1,4 @@
+import {Empty} from './Empty';
 import {useEffect,useRef} from 'react';
 import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -27,7 +28,7 @@ export function NotificationBell(){
     <summary aria-label={unread>0?`Notifications, ${unread} unread`:'Notifications'}><Icon name="bell"/>{unread>0&&<span className="bell-count" aria-hidden="true">{unread>9?'9+':unread}</span>}</summary>
     <div className="menu-list bell-menu" role="group" aria-label="Notifications">
       <div className="bell-head"><strong>Notifications</strong>{unread>0&&<button type="button" className="linklike" onClick={()=>void markRead(null)}>Mark all as read</button>}</div>
-      {query.isPending?<p className="muted">Loading…</p>:query.data?.items.length===0?<p className="muted">Nothing new yet. Assignments, results and messages show up here.</p>
+      {query.isPending?<p className="muted">Loading…</p>:query.data?.items.length===0?<Empty icon="bell" title="Nothing new yet">Assignments, results and messages show up here.</Empty>
         :<ul className="bell-list">{query.data?.items.map(n=><li key={n.id} className={n.read?'':'unread'}>
           <Link to={n.link} onClick={()=>{if(menu.current)menu.current.open=false;if(!n.read)void markRead([n.id])}}>
             <span className="bell-icon"><Icon name={ICON[n.kind]??'material'} size={20}/></span>

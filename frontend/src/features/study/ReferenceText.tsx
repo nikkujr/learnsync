@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {api,post,send,errorText} from '../../app/api';
@@ -17,7 +18,7 @@ export function ReferenceText({base,disabled,beforeFetch}:{base:string;disabled:
   const save=(approve:boolean)=>run(()=>send('PUT',`${base}/reference/snapshot`,{text,approve}),approve?'Approved. It becomes searchable for study help when you publish this link.':'Text saved as a draft. Students cannot use it until you approve it.');
   return <section className="panel"><h3>Text for study help</h3>
     <p className="muted">Study help never reads a link by itself. Fetch the page text or paste your own, check it, and approve it. Approved text is used only after you publish, and changing the link address clears it.</p>
-    {query.isPending?<p>Loading…</p>:<>
+    {query.isPending?<Loading/>:<>
       <p>Status: <strong>{!snap?'No text yet':snap.status==='approved'?'Approved':'Fetched, not approved'}</strong>{snap&&<span className="muted"> · {snap.method==='manual'?'pasted by you':'fetched from the link'}</span>}</p>
       <div className="actions"><button type="button" disabled={disabled||busy} onClick={fetchText}>Fetch text from the link</button></div>
       <label>Reviewed text (up to 40,000 characters)<textarea rows={8} value={text} maxLength={40000} disabled={disabled||busy} onChange={e=>setText(e.target.value)}/></label>

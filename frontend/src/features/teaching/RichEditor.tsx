@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect} from 'react';
 import {EditorContent,useEditor,useEditorState,type Editor} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -38,6 +39,6 @@ export function RichEditor({html,onChange,disabled}:{html:string;onChange:(html:
   });
   useEffect(()=>{if(editor&&html!==editor.getHTML())editor.commands.setContent(html,{emitUpdate:false})},[html,editor]);
   useEffect(()=>{editor?.setEditable(!disabled)},[disabled,editor]);
-  if(!editor)return <p>Loading editor…</p>;
+  if(!editor)return <Loading/>;
   return <div className="rich"><Toolbar editor={editor}/><EditorContent editor={editor}/></div>;
 }

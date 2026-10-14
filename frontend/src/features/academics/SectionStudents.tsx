@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useParams} from 'react-router-dom';
 import {keepPreviousData,useQuery} from '@tanstack/react-query';
@@ -59,7 +60,7 @@ export function SectionStudents(){
     if(failed.length)setMessage(`${failed.length} could not be added. ${failed.join(' ')}`);
   }
 
-  if(years.isPending||sections.isPending)return <p>Loading…</p>;
+  if(years.isPending||sections.isPending)return <Loading/>;
   if(!section||!term)return <section className="panel"><h1>Section not found</h1><Link to={`/admin/terms/${termId}`}>Back to the term</Link></section>;
   return <>
     <p className="back"><Link to={`/admin/terms/${termId}`}>← {term.name}</Link></p>
@@ -78,7 +79,7 @@ export function SectionStudents(){
         {tab==='add'&&<button className="primary" disabled={picked.length===0||busy} onClick={addPicked}>{busy?'Adding…':picked.length===0?'Add selected':`Add ${picked.length} selected`}</button>}
       </div>
       {message&&<p role="alert" className="error">{message}</p>}
-      {list.isPending?<p>Loading…</p>:list.error?<p role="alert">{list.error.message}</p>:rows.length===0
+      {list.isPending?<Loading/>:list.error?<p role="alert">{list.error.message}</p>:rows.length===0
         ?<p className="muted">{search?'No students match that search.':tab==='add'?'No students are available to add.':status==='withdrawn'?'Nobody has been withdrawn from this section.':'No students in this section yet.'}</p>
         :<div className="table-wrap"><table><caption className="sr-only">{tab==='current'?'Students in this section':'Students you can add'}</caption>
           <thead><tr>{tab==='add'&&<th scope="col"><input type="checkbox" aria-label="Select every student on this page" checked={pageAllPicked} onChange={e=>togglePage(e.target.checked)}/></th>}

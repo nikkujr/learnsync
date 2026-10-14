@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useState,type FormEvent} from 'react';
 import {useOutletContext} from 'react-router-dom';
@@ -29,7 +30,7 @@ export function FacultyAnnouncements(){
   return <>
     <button type="button" className="composer-card" disabled={closed} onClick={()=>{setMessage('');setEditing('new')}}><span className="post-icon announcement" aria-hidden="true">✉</span>Announce something to your class</button>
     {message&&<p role="alert">{message}</p>}
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       rows.length===0?null:
       <>{rows.map(a=><article className="panel post" key={a.id}>
         <span className="post-icon announcement" aria-hidden="true">✉</span>

@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {Link,useOutletContext,useParams,useSearchParams} from 'react-router-dom';
@@ -26,7 +27,7 @@ export function ScoresPage(){
   const refresh=()=>Promise.all([queryClient.invalidateQueries({queryKey:['scores',assessmentId]}),queryClient.invalidateQueries({queryKey:['attempts',assessmentId]}),queryClient.invalidateQueries({queryKey:['gradebook',offering.id]})]).then(()=>undefined);
   // the table's rows as of right now (after a save has refreshed them), so a feedback-only save with a blank score still counts as ungraded
   const current=():ScoreRow[]=>{const d=queryClient.getQueryData<ScoreRow[]>(['scores',assessmentId])??[];const at=queryClient.getQueryData<AttemptRow[]>(['attempts',assessmentId]);return a.data?.kind==='online_quiz'?d.filter(r=>!at?.some(x=>x.student_id===r.student_id)):d};
-  if(a.isPending)return <p>Loading…</p>;
+  if(a.isPending)return <Loading/>;
   if(a.error||!a.data?.published)return <section className="panel"><h2>Not available</h2><p role="alert">{a.error?.message??'Publish this assessment first.'}</p><Link to={`/faculty/offerings/${offering.id}/classwork`}>Back to classwork</Link></section>;
   const rev=a.data.published;const kind=a.data.kind;
   const toReturn=rows.data?.filter(r=>r.to_return).length??0;
@@ -44,7 +45,7 @@ export function ScoresPage(){
       <button className={toReturn>0?'primary':''} disabled={closed||toReturn===0} onClick={release}>{toReturn>0?`Return ${toReturn} graded result${toReturn===1?'':'s'}`:'All graded results returned'}</button></div></div>
     {message&&<p role="status">{message}</p>}
     {kind==='online_quiz'&&<Attempts base={base} attempts={attempts} closed={closed} onChanged={refresh} setMessage={setMessage}/>}
-    {rows.isPending||(kind==='online_quiz'&&attempts.isPending)?<p>Loading students…</p>:rows.error?<p role="alert">{rows.error.message}</p>:kind==='online_quiz'&&attempts.error?<p role="alert">{attempts.error.message}</p>:
+    {rows.isPending||(kind==='online_quiz'&&attempts.isPending)?<Loading/>:rows.error?<p role="alert">{rows.error.message}</p>:kind==='online_quiz'&&attempts.error?<p role="alert">{attempts.error.message}</p>:
       <ScoreTable key={assessmentId} rows={kind==='online_quiz'?rows.data.filter(r=>!attempts.data?.some(x=>x.student_id===r.student_id)):rows.data}
         kind={kind} base={base} max={rev.max_points} closed={closed} onSaved={refresh} setMessage={setMessage} current={current}
         heading={kind==='online_quiz'?'Students with no attempts':'Scores'}/>}
@@ -172,7 +173,7 @@ function Attempts({base,attempts,closed,onChanged,setMessage}:{base:string;attem
   }
   return <section className="panel"><div className="page-heading"><h3>Attempts</h3>
     {open>0&&<button disabled={closed} onClick={closeOpen}>Close {open} open attempt{open===1?'':'s'}</button>}</div>
-    {attempts.isPending?<p>Loading…</p>:attempts.error?<p role="alert">{attempts.error.message}</p>:attempts.data.length===0?<p className="muted">No student has started this quiz yet.</p>:
+    {attempts.isPending?<Loading/>:attempts.error?<p role="alert">{attempts.error.message}</p>:attempts.data.length===0?<p className="muted">No student has started this quiz yet.</p>:
       <div className="table-wrap" role="region" aria-label="Attempts" tabIndex={0}><table><thead><tr><th>Student</th><th>Attempt</th><th>Status</th><th>Score</th><th>Submitted</th><th><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{attempts.data.map(x=><tr key={x.id}><td>{x.student}</td><td>{x.attempt_number}</td><td><span className="badge">{x.state==='submitted'?'Submitted':'In progress'}</span></td>
           <td>{x.state==='submitted'?`${fmt(x.score)} / ${fmt(x.max_score)}`:'—'}</td><td>{when(x.submitted_at)}</td>
@@ -189,7 +190,7 @@ function ReviewDialog({base,attemptId,closed,onClose,onChanged}:{base:string;att
     catch(e){setMessage(errorText(e))}
   }
   return <Dialog title="Review answers" onClose={onClose}>
-    {detail.isPending?<p>Loading…</p>:detail.error?<p role="alert">{detail.error.message}</p>:<>
+    {detail.isPending?<Loading/>:detail.error?<p role="alert">{detail.error.message}</p>:<>
       <p>Attempt {detail.data.attempt_number}: {fmt(detail.data.score)} / {fmt(detail.data.max_score)}</p>
       {message&&<p role="status">{message}</p>}
       {detail.data.questions.map((q,i)=><Correction key={q.key} n={i+1} q={q} closed={closed} onSave={correct}/>)}</>}

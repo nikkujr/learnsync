@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -17,7 +18,7 @@ export function YourWorkPage(){
   const results=useQuery({queryKey:['learn-results',offering.id],queryFn:()=>api<Results>(`/learn/offerings/${offering.id}/results`)});
   const base=`/student/offerings/${offering.id}`;
   if(work.error||results.error)return <p role="alert">{(work.error??results.error)!.message}</p>;
-  if(!work.data||!results.data)return <p>Loading…</p>;
+  if(!work.data||!results.data)return <Loading/>;
   const now=Date.now();
   const past=(w:LearnItem)=>!!w.deadline&&Date.parse(w.deadline)<now;
   const kind=(w:LearnItem)=>w.excused?'excused':w.bucket==='closed'||((w.bucket==='todo'||w.bucket==='again')&&past(w))?'missing':w.result?'returned':w.bucket==='awaiting'||w.bucket==='done'?'turned':'assigned';

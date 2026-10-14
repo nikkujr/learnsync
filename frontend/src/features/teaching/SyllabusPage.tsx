@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useState,type FormEvent} from 'react';
 import {Link,useOutletContext} from 'react-router-dom';
@@ -29,7 +30,7 @@ export function SyllabusPage(){
     try{const result=await upload<{warnings:string[]}>(`${url}/import`,new FormData(e.currentTarget));setWarnings(result.warnings);refresh()}
     catch(err){setMessage(errorText(err))}
   }
-  if(query.isPending)return <p>Loading syllabus…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const {published,draft}=query.data;
   const strip=<p className="back"><Link to={`/faculty/offerings/${offering.id}/classwork`}>← Classwork</Link></p>;

@@ -1,3 +1,5 @@
+import {Empty} from '../../components/Empty';
+import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {useInfiniteQuery,useQuery} from '@tanstack/react-query';
@@ -37,7 +39,7 @@ export function StudyBuddyPage(){
         <label>Subject<select value={filter} onChange={e=>{const v=e.target.value;setParams(v?{subject:v}:{});setOpen(null)}}><option value="">All subjects</option>{options.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
         {current.length>1&&<label>New conversation about<select value={target} onChange={e=>setNewIn(e.target.value)}>{current.map(s=><option key={s.offering_id} value={s.offering_id}>{s.code} · {s.title}</option>)}</select></label>}
         <button className="primary wide" disabled={!target} onClick={startNew}><span aria-hidden="true">＋</span> New conversation</button>
-        {list.isPending?<p>Loading…</p>:list.error?<p role="alert">{list.error.message}</p>:chats.length===0?<p className="muted">No conversations yet. Start one and ask about a lesson.</p>:
+        {list.isPending?<Loading/>:list.error?<p role="alert">{list.error.message}</p>:chats.length===0?<Empty icon="chat" title="No conversations yet">Start one and ask about a lesson.</Empty>:
           <ul className="chat-list">{chats.map(c=><li key={c.id}>
             <button className={`chat-item${open?.id===c.id?' on':''}`} aria-current={open?.id===c.id} onClick={()=>setOpen({offeringId:c.offering_id,id:c.id,canAsk:c.can_ask,note:c.can_ask?'':NOTE})}>
               <span className="t">{c.title}</span><span className="muted">{c.subject_code} · {new Date(c.updated_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}{c.can_ask?'':' · read only'}</span></button></li>)}</ul>}

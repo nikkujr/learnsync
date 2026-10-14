@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useHere} from '../../components/origin';
 import {useQuery} from '@tanstack/react-query';
@@ -18,7 +19,7 @@ function Bars({data,label}:{data:{key:string;label:string;count:number}[];label:
 export function StudentProgress(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const query=useQuery({queryKey:['progress',offering.id],queryFn:()=>api<Progress>(`/learn/offerings/${offering.id}/progress`)});
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const p=query.data;
   return <>
@@ -39,7 +40,7 @@ export function FacultyProgress(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const here=useHere();
   const query=useQuery({queryKey:['class-progress',offering.id],queryFn:()=>api<ClassProgress>(`/teach/offerings/${offering.id}/progress`)});
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const c=query.data;
   return <>

@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState,type FormEvent} from 'react';
 import {Link,useNavigate,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -50,7 +51,7 @@ export function SubjectSetup(){
   const [finished,setFinished]=useState<number|null>(null);   // lives here: once published the draft is gone and this component re-renders
   const refresh=()=>Promise.all(['syllabus','assessments','items','offering','my-offerings'].map(k=>queryClient.invalidateQueries({queryKey:[k]})));
   if(offering.term_status==='closed')return <section className="panel"><h2>This term is closed</h2><p>A closed term cannot be set up. Ask an administrator to reopen it.</p></section>;
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const {published,draft}=query.data;
   if(finished!==null)return <Done offering={offering} planned={finished}/>;
@@ -78,7 +79,7 @@ function Start({offering,published,message,setMessage,setWarnings,onChanged}:{of
       <button className="primary" disabled={busy} onClick={blank}>Continue with the guide</button></section>}
     {!published&&<div className="cards">
       <section className="panel"><h3>Copy a previous subject</h3><p className="muted">Brings over its outline, grading, lessons, files, links and assessments as drafts. Never students, dates, scores or attempts.</p>
-        {mine.isPending?<p>Loading…</p>:earlier.length===0?<p className="muted">You have no other subject to copy from.</p>:<>
+        {mine.isPending?<Loading/>:earlier.length===0?<p className="muted">You have no other subject to copy from.</p>:<>
           <label>Subject<select value={source} onChange={e=>setSource(e.target.value)}><option value="">Choose one…</option>{earlier.map(o=><option key={o.id} value={o.id}>{o.subject.code} · {o.subject.title} · {o.term}</option>)}</select></label>
           <button className="primary" disabled={!source||busy} onClick={copy}>Copy into this subject</button></>}</section>
       <section className="panel"><h3>Import a syllabus file</h3><p className="muted">A DOCX or PDF. The outline is read from it and you check the result.</p>

@@ -24,6 +24,10 @@ const PATHS={
   star:'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8L12 3.5Z',
   upload:'M12 19V6M6.5 11.5 12 6l5.5 5.5M5 20h14',
   comment:'M4 5h16v11H9l-5 4V5Z',
+  inbox:'M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6l2-8Z',
+  chat:'M4 5h16v11H9l-5 4V5ZM8 9h8M8 12h5',
+  school:'M2 9l10-5 10 5-10 5L2 9ZM6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5M22 9v6',
+  chart:'M4 20V10M10 20V4M16 20v-7M22 20H2',
   link:'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
 } as const;
 export type IconName=keyof typeof PATHS;

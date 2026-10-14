@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Icon,type IconName} from '../../components/Icon';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -51,7 +52,7 @@ export function StudentStream(){
   const home=useQuery(studentHomeQuery);
   const error=posts.error??items.error??results.error;
   if(error)return <p role="alert">{error.message}</p>;
-  if(!posts.data||!items.data||!results.data)return <p>Loading…</p>;
+  if(!posts.data||!items.data||!results.data)return <Loading/>;
   const feed:Entry[]=[
     ...posts.data.items.filter(p=>p.published_at).map((p):Entry=>({key:'p'+p.id,type:offering.faculty.display_name,icon:'announcement',title:p.title,at:p.published_at!,body:p.body})),
     ...items.data.map((i):Entry=>({key:'i'+i.id,type:`${offering.faculty.display_name} posted a new ${i.kind==='lesson'?'lesson':i.kind==='file'?'file':'link'}`,icon:'material',title:i.title,at:i.published_at,to:`${base}/lessons/${i.id}`})),

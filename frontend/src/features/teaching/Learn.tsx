@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {Link,useLocation,useOutletContext,useParams} from 'react-router-dom';
 import {useInfiniteQuery,useQuery} from '@tanstack/react-query';
@@ -17,7 +18,7 @@ export function StudentSyllabus(){
   const query=useQuery({queryKey:['learn-syllabus',offering.id],queryFn:()=>api<LearnSyllabus>(`/learn/offerings/${offering.id}/syllabus`)});
   const items=useQuery({queryKey:['learn-items',offering.id],queryFn:()=>api<LearnItem[]>(`/learn/offerings/${offering.id}/items`)});
   const here=useHere();
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const {published,covered}=query.data;
   // published lessons and materials attached to a chapter or topic of the outline, shown beside it
@@ -37,7 +38,7 @@ export function StudentLessons(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const query=useQuery({queryKey:['learn-items',offering.id],queryFn:()=>api<LearnItem[]>(`/learn/offerings/${offering.id}/items`)});
   const syllabus=useQuery({queryKey:['learn-syllabus',offering.id],queryFn:()=>api<LearnSyllabus>(`/learn/offerings/${offering.id}/syllabus`)});
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   if(query.data.length===0)return <section className="panel"><h2>No lessons or materials yet</h2><p>Published lessons, files and links appear here.</p></section>;
   const outline=syllabus.data?.published?.outline;
@@ -93,7 +94,7 @@ export function StudentLesson(){
   const [marking,setMarking]=useState(false);const [problem,setProblem]=useState('');
   const word=NOUN[query.data?.kind??'lesson'];const Word=word.charAt(0).toUpperCase()+word.slice(1);
   async function complete(){setMarking(true);setProblem('');try{await post(`/learn/offerings/${offeringId}/lessons/${itemId}/complete`,{});await Promise.all(['progress','learn-item','learn-items'].map(k=>queryClient.invalidateQueries({queryKey:[k,offeringId]})));celebrate();toast(`${Word} marked complete.`)}catch(e){setProblem(errorText(e))}finally{setMarking(false)}}
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <section className="panel"><h2>Not available</h2><p role="alert">{query.error.message}</p><Link to={back}>Back to classwork</Link></section>;
   const i=query.data;
   const nextLabel=(k?:string)=>k==='file'?'Next file':k==='reference'?'Next link':'Next lesson';
@@ -114,7 +115,7 @@ export function StudentAnnouncements(){
   type Row=Pick<Announcement,'id'|'title'|'body'|'published_at'>;
   const query=useInfiniteQuery({queryKey:['learn-announcements',offering.id],initialPageParam:0,queryFn:({pageParam})=>api<{items:Row[];has_more:boolean}>(`/learn/offerings/${offering.id}/announcements?limit=25&offset=${pageParam}`),getNextPageParam:(p,all)=>p.has_more?all.length*25:undefined});
   const rows=query.data?.pages.flatMap(p=>p.items)??[];
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   if(rows.length===0)return <section className="panel"><h2>No announcements</h2></section>;
   return <div className="cards">{rows.map(a=><article className="panel" key={a.id}><p className="eyebrow">{a.published_at?when(a.published_at):''}</p><h3>{a.title}</h3><p className="pre">{a.body}</p></article>)}{query.hasNextPage&&<button disabled={query.isFetchingNextPage} onClick={()=>query.fetchNextPage()}>{query.isFetchingNextPage?'Loading…':'Load more announcements'}</button>}</div>;

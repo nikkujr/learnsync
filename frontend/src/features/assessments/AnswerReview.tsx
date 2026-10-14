@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -29,7 +30,7 @@ export function AttemptReview({base,attempts,studentName}:{base:string;attempts:
   const current=reviewable.find(a=>a.id===chosen);
   return <>
     {reviewable.length>1&&<label>Attempt<select value={chosen} onChange={e=>setChosen(e.target.value)}>{reviewable.map(a=><option key={a.id} value={a.id}>Attempt {a.attempt_number}{a.submitted_at?` · ${when(a.submitted_at)}`:''} · {fmt(a.score)} / {fmt(a.max_score)}</option>)}</select></label>}
-    {detail.isPending?<p>Loading…</p>:detail.error?<p role="alert">{detail.error.message}</p>:<>
+    {detail.isPending?<Loading/>:detail.error?<p role="alert">{detail.error.message}</p>:<>
       <p role="status"><strong>{right} of {qs.length} correct</strong>{current&&<> · score {fmt(current.score)} / {fmt(current.max_score)}</>}</p>
       {qs.map((q,i)=><article className={`subpanel review ${verdict(q).key}`} key={q.key}>
         <p><strong>{i+1}. {q.prompt}</strong> <span className="muted">({q.points} pt{q.points===1?'':'s'})</span></p>

@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useHere,useOrigin} from '../../components/origin';
 import {SubjectCard} from '../dashboard/Dashboards';
 import {useState,type FormEvent} from 'react';
@@ -38,7 +39,7 @@ export function OfferingRoster({embedded=false}:{embedded?:boolean}){
     {embedded&&<h2 className="people-h">Students{roster.data&&<span>{roster.data.length}</span>}</h2>}
     {!isAdmin&&<label className="inline"><input type="checkbox" checked={history} onChange={e=>setHistory(e.target.checked)}/> Show withdrawn students</label>}
     {message&&<p role="status">{message}</p>}
-    {roster.isPending?<p>Loading…</p>:roster.error?<p role="alert">{roster.error.message}</p>:
+    {roster.isPending?<Loading/>:roster.error?<p role="alert">{roster.error.message}</p>:
       roster.data.length===0?<section className="panel"><p>No students are enrolled in this subject yet.</p></section>:
       <section className="panel"><div className="table-wrap" tabIndex={0} role="region" aria-label="Students"><table>
         <thead><tr><th>Student</th><th>Number</th><th>Section</th><th>Status</th>{isAdmin&&<th>Note</th>}{isAdmin&&<th><span className="sr-only">Actions</span></th>}</tr></thead>
@@ -83,7 +84,7 @@ export function FacultySubjects(){
   const query=useQuery({queryKey:['my-offerings'],queryFn:()=>api<OfferingSummary[]>('/me/offerings')});
   return <>
     <h1>My subjects</h1><p className="muted">Subjects assigned to you, with their sections and enrolled students.</p>
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       query.data.length===0?<section className="panel"><h2>Nothing assigned yet</h2><p>When an administrator assigns you a subject, it appears here.</p></section>:
       <div className="class-grid">{query.data.map(o=><SubjectCard key={o.id} id={o.id} title={o.subject.title} section={`${o.subject.code} · ${o.sections.map(x=>x.name).join(', ')||'No sections'}`} teacher={session?.user?.display_name??''} meta={o.term_status==='closed'?`${o.term} · closed`:o.term}
         detail={`${o.enrolled} student${o.enrolled===1?'':'s'}`} to={`/faculty/offerings/${o.id}/stream`}
@@ -95,7 +96,7 @@ export function StudentSubjects(){
   const query=useQuery({queryKey:['my-subjects'],queryFn:()=>api<MySubject[]>('/me/subjects')});
   return <>
     <h1>My subjects</h1><p className="muted">Subjects you are enrolled in, including past terms.</p>
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       query.data.length===0?<section className="panel"><h2>No subjects yet</h2><p>Your subjects appear here once you are enrolled in a section.</p></section>:
       <div className="class-grid">{query.data.map(s=>{const o=`/student/offerings/${s.offering_id}`;const active=s.enrollment_status==='enrolled';
         return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.subject.title} section={`${s.subject.code} · ${s.term}`} teacher={s.faculty.display_name}

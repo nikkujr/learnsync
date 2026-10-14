@@ -1,3 +1,5 @@
+import {Icon,type IconName} from '../../components/Icon';
+import {Empty} from '../../components/Empty';
 import {useEffect,useRef} from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -51,10 +53,12 @@ export function StudentHome(){
     const soon=d.todo.filter(w=>w.deadline&&w.state!=='not_open').slice(0,5);
     return <>
       <h1 className="sr-only">Home</h1>
+      <Today name={session?.user?.display_name??''} line={`${plural(d.subjects.length,'class','classes')} this term`} tiles={[
+        {icon:'todo',n:d.subjects.reduce((n,x)=>n+x.to_do,0),label:'to do',to:'/student/todo'},{icon:'calendar',n:soon.length,label:'due soon',to:'/student/todo'},{icon:'book',n:d.subjects.length,label:'classes',to:'/student/subjects'}]}/>
       {soon.length>0&&<section className="due-soon" aria-labelledby="soon-h"><div className="section-head"><h2 id="soon-h">Due soon</h2><Link state={here} to="/student/todo">View to-dos</Link></div>
         <ul className="soon-list">{soon.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}><strong>{w.title}</strong><span className="muted">{w.subject} · due {dateTime(w.deadline!)}</span></Link></li>)}</ul></section>}
       <section aria-labelledby="subjects-h"><h2 id="subjects-h" className="sr-only">Your classes</h2>
-        {d.subjects.length===0?<p className="panel muted">No current subjects. You are not enrolled in a current subject yet.</p>:<div className="class-grid">{d.subjects.map(s=>{const c=teachers.get(s.offering_id);
+        {d.subjects.length===0?<section className="panel"><Empty icon="school" title="No classes yet">You are not enrolled in a current subject. Once you are placed in a section, your classes appear here.</Empty></section>:<div className="class-grid">{d.subjects.map(s=>{const c=teachers.get(s.offering_id);
           return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={c?.section??s.code} teacher={c?.teacher??''} meta={s.to_do?plural(s.to_do,'item')+' to do':'Nothing to do'}
             progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Your work',`/student/offerings/${s.offering_id}/your-work`]]}/>})}</div>}</section>
       <div className="dash-grid home-more">
@@ -97,6 +101,14 @@ export function SubjectCard({id,title,section,teacher,meta,progress,detail,to,li
     <div className="class-foot">{links.map(([l,h])=><Link key={h} state={here} to={h}>{l}</Link>)}</div></article>;
 }
 
+/** Greeting and the few numbers that matter today; each tile with a link opens the thing it counts. */
+function Today({name,line,tiles}:{name:string;line:string;tiles:{icon:IconName;n:number;label:string;to?:string}[]}){
+  const here=useHere();const hour=new Date().getHours();
+  const hello=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  return <section className="home-today" aria-label="Today"><div><h2>{hello}, {name.split(' ')[0]}</h2><p className="muted">{line}</p></div>
+    <ul>{tiles.map(t=><li key={t.label} className={t.n>0?'has':''}>{t.to&&t.n>0?<Link state={here} to={t.to}><Icon name={t.icon} size={22}/><strong>{t.n}</strong><span>{t.label}</span></Link>:<div><Icon name={t.icon} size={22}/><strong>{t.n}</strong><span>{t.label}</span></div>}</li>)}</ul></section>;
+}
+
 // ---------------------------------------------------------------- faculty
 interface FacultyHomeData{name:string;subjects:{offering_id:string;code:string;title:string;sections:string[];students:number;term:string;drafts_content:number;drafts_assessments:number;to_grade:number;needs_review:number;average_progress:number|null;quiet_students:number}[];
   closed_subjects:number;task:{headline:string;detail:string;action:string;link:string;icon:string}|null;queue:{title:string;count:number;subject:string;link:string}[];review_link:string|null;deadlines:{title:string;deadline:string;subject:string;link:string}[];
@@ -108,10 +120,13 @@ export function FacultyHome(){
   return <Page query={query}>{d=>{
     return <>
       <h1 className="sr-only">Home</h1>
+      <Today name={d.name} line={`${plural(d.totals.subjects,'class','classes')} · ${plural(d.totals.students,'enrollment')}`} tiles={[
+        {icon:'review',n:d.totals.to_grade,label:'to grade',to:d.queue[0]?.link},{icon:'star',n:d.totals.needs_review,label:'grades to review',to:d.review_link??undefined},
+        {icon:'calendar',n:d.deadlines.length,label:'due in two weeks',to:'/faculty/calendar'},{icon:'material',n:d.totals.drafts,label:'drafts',to:'/faculty/subjects'}]}/>
       <section aria-labelledby="my-subjects-h"><h2 id="my-subjects-h" className="sr-only">Your classes</h2>
-        {d.subjects.length===0?<p className="panel muted">No subjects are assigned to you in an open term.</p>:<div className="class-grid">{d.subjects.map(s=>{
+        {d.subjects.length===0?<section className="panel"><Empty icon="school" title="No classes yet">No subject is assigned to you in an open term. Your administrator assigns them in the term workspace.</Empty></section>:<div className="class-grid">{d.subjects.map(s=>{
           const o=`/faculty/offerings/${s.offering_id}`;const drafts=s.drafts_content+s.drafts_assessments;
-          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={s.sections.join(', ')||'No sections'} teacher={d.name} meta={s.to_grade?`${s.to_grade} to grade`:undefined}
+          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={s.sections.join(', ')||'No sections'} teacher={d.name} meta={s.to_grade?`${s.to_grade} to grade`:undefined} progress={s.average_progress}
             detail={`${plural(s.students,'student')}${s.needs_review?` · ${s.needs_review} to review`:''}${drafts?` · ${plural(drafts,'draft')}`:''}`}
             to={`${o}/stream`} links={[['Classwork',`${o}/classwork`],['Grades',`${o}/gradebook`]]}/>})}</div>}
         <p><Link state={here} className="touch" to="/faculty/subjects">{d.closed_subjects?`All subjects, including ${plural(d.closed_subjects,'past one')}`:'All subjects'}</Link></p></section>
@@ -119,7 +134,6 @@ export function FacultyHome(){
         <div className="dash-main">
           {d.task?<Hero eyebrow="Your next teaching task" title={d.task.headline} detail={d.task.detail} action={d.task.action} to={d.task.link} icon={d.task.icon}/>
             :<Hero eyebrow="Your next teaching task" title="Nothing is waiting for you" detail="No activity submissions to grade, no grades to review and no drafts in progress." icon="✓"/>}
-          <Stats items={[[d.totals.subjects,'Assigned subjects in open terms'],[d.totals.students,'Subject enrollments'],[d.totals.to_grade,'Activity submissions to grade',d.queue[0]?.link],[d.totals.needs_review,'Students with grades to review',d.review_link??undefined]]}/>
         </div>
         <div className="dash-side">
           {d.queue.length>0&&<section className="panel"><h2>Activity submissions needing grading</h2><p className="muted">Top 5 by number awaiting grading. <Link state={here} className="touch" to="/faculty/review">See everything to review</Link></p><ul className="rows">{d.queue.map((q,i)=><li key={i}><Link state={here} to={q.link}>{q.title}</Link><span className="muted">{q.subject} · {plural(q.count,'submission')} waiting</span></li>)}</ul></section>}
@@ -203,11 +217,11 @@ export function StudentTodo(){
       const everything=counts.assigned+counts.missing+counts.done===0;
       return <>
         <nav className="tabs" aria-label="To-do sections">{TODO_TABS.map(([k,l])=><Link key={k} to={`?tab=${k}`} replace className={tab===k?'active':undefined} aria-current={tab===k?'page':undefined}>{l}{counts[k]>0&&<span className="tab-count">{counts[k]}</span>}</Link>)}</nav>
-        {everything&&<section className="panel"><h2>You’re up to date</h2><p className="muted">Nothing needs your action. New work appears here when your teacher publishes it.</p><Link state={here} className="button" to="/student/subjects">See my subjects</Link></section>}
-        {!everything&&tab==='assigned'&&(assigned.length===0?<p className="muted">Nothing is assigned right now.</p>
+        {everything&&<section className="panel"><Empty icon="check" title="You’re up to date" action={<Link state={here} className="button" to="/student/subjects">See my subjects</Link>}>Nothing needs your action. New work appears here when your teacher publishes it.</Empty></section>}
+        {!everything&&tab==='assigned'&&(assigned.length===0?<Empty icon="todo" title="Nothing is assigned">New work shows up here when your teacher posts it.</Empty>
           :(['No due date','This week','Next week','Later'] as const).map(b=>{const items=assigned.filter(w=>bucket(w)===b);return items.length>0&&group(b,'',items,due)}))}
-        {!everything&&tab==='missing'&&(missing.length===0?<p className="muted">Nothing is missing. Work that is past due and was not turned in shows here.</p>:group('Missing','Past due and not turned in. Work marked closed can no longer be turned in.',missing,pastNote))}
-        {!everything&&tab==='done'&&(done.length===0?<p className="muted">Nothing is done yet.</p>:group('Done','Turned in or returned, and quizzes you can try again.',done,doneNote))}
+        {!everything&&tab==='missing'&&(missing.length===0?<Empty icon="check" title="Nothing is missing">Work that is past due and not turned in shows here.</Empty>:group('Missing','Past due and not turned in. Work marked closed can no longer be turned in.',missing,pastNote))}
+        {!everything&&tab==='done'&&(done.length===0?<Empty icon="inbox" title="Nothing is done yet">Work you turn in, and results you receive, collect here.</Empty>:group('Done','Turned in or returned, and quizzes you can try again.',done,doneNote))}
       </>}}</Page>
   </>;
 }

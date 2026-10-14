@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect,useRef,useState,type KeyboardEvent,type MutableRefObject} from 'react';
 import {useOutletContext} from 'react-router-dom';
 import {useQuery,type UseQueryResult} from '@tanstack/react-query';
@@ -184,7 +185,7 @@ function GridView({offering,sectionId,setSectionId,query,setMode}:ViewProps){
       <p role="status" className="muted">{closed?'This term is closed, so attendance is read-only.':status==='saved'?'All changes saved.':status==='saving'?'Saving…':status==='failed'?`${unsaved} change${unsaved===1?'':'s'} not saved. Use Retry below.`:'Saving in a moment…'}</p>
       {Object.entries(errors).map(([d,m])=><p key={d} role="alert" className="error">{pretty(d)}: {m} <button onClick={()=>void flush(d)}>Retry</button></p>)}
     </section>
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:roster.length===0?<section className="panel"><p className="muted">No students are enrolled through this section.</p></section>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:roster.length===0?<section className="panel"><p className="muted">No students are enrolled through this section.</p></section>:
       <section className="panel"><div className="table-wrap" role="region" aria-label="Attendance grid, scrolls sideways" tabIndex={0}>
         <table className="att-grid" ref={table}><caption className="sr-only">Attendance: students down, dates across. Use the arrow keys to move between cells, then P, L, A or E to mark and Delete to clear. Enter or Space changes the status.</caption>
           <thead><tr><th scope="col" className="sticky">Student</th>{dates.map(d=>{const rec=byDate.get(d);const marked=roster.filter(r=>valueOf(d,r.student_id)!==null).length;
@@ -240,7 +241,7 @@ function DayView({offering,sectionId,setSectionId,query,setMode}:ViewProps){
         return <li key={d} className={view==='month'&&parse(d).getMonth()!==parse(date).getMonth()?'other':undefined}><button aria-pressed={d===date} aria-label={`${DAY[dow]} ${parse(d).toLocaleDateString(undefined,{month:'long',day:'numeric'})}: ${rec?`recorded, ${marked} of ${total} marked`:'not recorded'}`} className={`${d===date?'on ':''}${d===today()?'today ':''}${rec?(marked<total?'partial':'full'):''}`} onClick={()=>openDay(d)}>
           {view==='week'&&<span>{DAY[dow]}</span>}<strong>{parse(d).getDate()}</strong><span className="muted">{rec?`${marked}/${total}`:'—'}</span></button></li>})}</ul>
       <p className="muted">Green underline: everyone marked. Amber: some students still not marked. Dashed outline: today.</p></section>
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       <div ref={register} tabIndex={-1} aria-label="Attendance register" style={{outline:'none',scrollMarginTop:96}}><Register key={`${sectionId}|${date}|${existing?.id??'new'}|${query.dataUpdatedAt}`} offering={offering} sectionId={sectionId} date={date} period={existing?existing.period:period} roster={query.data.roster} initial={existing?.marks??{}} closed={offering.term_status==='closed'} setMessage={setMessage} unsaved={unsaved} sessionId={existing?.id}/></div>}
     {message&&<p role="status">{message}</p>}
   </>;

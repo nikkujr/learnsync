@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useRef,useState} from 'react';
 import {Link,useOutletContext} from 'react-router-dom';
@@ -38,7 +39,7 @@ export function GradebookPage(){
   const inflight=useRef(new Set<string>());                              // a cell being saved is not saved twice (Enter and leaving the cell both commit)
   const refresh=()=>queryClient.invalidateQueries({queryKey:['gradebook',offering.id]});
 
-  if(query.isPending)return <p>Loading gradebook…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error){
     const code=query.error instanceof ApiError?query.error.code:'';
     return <section className="panel"><h2>The gradebook is not ready</h2><p role="alert">{query.error.message}</p>

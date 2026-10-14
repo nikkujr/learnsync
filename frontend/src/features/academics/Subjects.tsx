@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useNavigate,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -37,7 +38,7 @@ export function Subjects(){
     <div className="actions"><label>Search subjects<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Code or title"/></label>
       <label className="inline"><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived subjects</label></div>
     {message&&<p role="status">{message}</p>}
-    {query.isPending?<p>Loading…</p>:query.error?<p role="alert">{query.error.message}</p>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       query.data.length===0?<section className="panel"><h2>No subjects yet</h2><p>Import the prospectus or add subjects manually.</p></section>:grouped.size===0?<section className="panel"><h2>No subjects match</h2><p>Change the search.</p></section>:
       [...grouped].map(([group,items])=><section className="panel" key={group}><h2>{group}</h2>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Subjects"><table><thead><tr><th>Code</th><th>Title</th><th>Units</th><th><span className="sr-only">Actions</span></th></tr></thead>
@@ -97,7 +98,7 @@ export function ProspectusReview(){
     if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>e.preventDefault();
     addEventListener('beforeunload',warn);return()=>removeEventListener('beforeunload',warn);
   },[dirty]);
-  if(query.isPending)return <p>Loading draft…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const draft=query.data;const list=rows??draft.subjects;
   const locked=draft.status!=='draft';

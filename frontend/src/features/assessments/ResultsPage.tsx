@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -7,7 +8,7 @@ import {PERIOD_LABEL,fmt,when,type Results} from './types';
 export function ResultsPage(){
   const {offering}=useOutletContext<{offering:OfferingSummary}>();
   const query=useQuery({queryKey:['learn-results',offering.id],queryFn:()=>api<Results>(`/learn/offerings/${offering.id}/results`)});
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error)return <p role="alert">{query.error.message}</p>;
   const {results,grades}=query.data;
   return <>

@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Icon} from '../../components/Icon';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Link,useNavigate,useOutletContext,useParams} from 'react-router-dom';
@@ -32,7 +33,7 @@ export function AssessmentEditorPage(){
     setStarting(true);
     post(`${base}/draft`,{}).then(()=>query.refetch()).finally(()=>setStarting(false));
   },[needsDraft]); // eslint-disable-line react-hooks/exhaustive-deps
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error||!item)return <section className="panel"><h2>Assessment unavailable</h2><p role="alert">{query.error?.message}</p><Link to={back}>Back to classwork</Link></section>;
   if(!item.draft)return closed?<section className="panel"><p className="back"><Link to={back}>← Classwork</Link></p><h2>{item.published?.title}</h2><p className="muted">This term is closed, so it cannot be edited.</p></section>:<p>Preparing a draft…</p>;
   return <Editor key={item.draft.version} offering={offering} assessment={item} refetch={()=>query.refetch()}/>;

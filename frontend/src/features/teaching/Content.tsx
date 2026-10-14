@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Icon} from '../../components/Icon';
 import {useToast} from '../../components/undo';
 import {useEffect,useState,type FormEvent} from 'react';
@@ -61,7 +62,7 @@ export function ItemEditorPage(){
     setStarting(true);
     post(`${base}/draft`,{}).then(()=>query.refetch()).finally(()=>setStarting(false));
   },[needsDraft]); // eslint-disable-line react-hooks/exhaustive-deps
-  if(query.isPending)return <p>Loading…</p>;
+  if(query.isPending)return <Loading/>;
   if(query.error||!item)return <section className="panel"><h2>Item unavailable</h2><p role="alert">{query.error?.message}</p><Link to={`/faculty/offerings/${offering.id}/classwork`}>Back to classwork</Link></section>;
   if(!item.draft)return closed?<ReadOnlyItem offering={offering} item={item}/>:<p>Preparing a draft…</p>;
   return <ItemEditor key={item.draft.version} offering={offering} item={item} refetch={()=>query.refetch()}/>;

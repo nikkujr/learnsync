@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Link,NavLink,Outlet,useLocation,useMatch,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -33,7 +34,7 @@ export function OfferingLayout({role}:{role:'faculty'|'student'}){
   const syllabus=useQuery({queryKey:['syllabus',offeringId],queryFn:()=>api<SyllabusState>(`/teach/offerings/${offeringId}/syllabus`),enabled:role==='faculty'});
   const needsSetup=role==='faculty'&&!setup&&query.data?.term_status==='open'&&!!syllabus.data&&!syllabus.data.published;
   return <>
-    {query.isPending?<p>Loading…</p>:query.error?<section className="panel"><h1>Subject unavailable</h1><p role="alert">{query.error.message}</p></section>:<>
+    {query.isPending?<Loading/>:query.error?<section className="panel"><h1>Subject unavailable</h1><p role="alert">{query.error.message}</p></section>:<>
       {(()=>{const o=query.data;const line=`${o.subject.code} · ${role==='faculty'?o.sections.map(s=>s.name).join(', ')||'No sections':o.faculty.display_name} · ${o.term}${o.term_status==='closed'?' · closed (read-only)':''}`;
         return stream?<header className={`banner ${classArt(o.id)}`} style={{'--cc':classColor(o.id)} as React.CSSProperties}><h1>{o.subject.title}</h1><p>{line}</p></header>
           :<header className="class-title" style={{'--cc':classColor(o.id)} as React.CSSProperties}><span className="class-dot" style={{background:classColor(o.id)}} aria-hidden="true">{initials(o.subject.title)[0]}</span><div><h1>{o.subject.title}</h1><p className="muted">{line}</p></div></header>})()}

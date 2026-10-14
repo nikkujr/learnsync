@@ -1,3 +1,5 @@
+import {Empty} from '../../components/Empty';
+import {Loading} from '../../components/Loading';
 import {useState,type FormEvent} from 'react';
 import {useLocation} from 'react-router-dom';
 import {useInfiniteQuery,useQuery} from '@tanstack/react-query';
@@ -35,7 +37,7 @@ export function MyIssues(){
       {error&&<p role="alert">{error}</p>}
       <div className="actions"><button type="button" onClick={()=>setOpen(false)}>Cancel</button><button className="primary" disabled={busy}>{busy?'Sending…':'Send report'}</button></div></form></Dialog>}
     <h2>Your reports</h2>
-    {list.isPending?<p>Loading…</p>:list.error?<p role="alert">{list.error.message}</p>:mine.length===0?<section className="panel"><p className="muted">You have not sent any reports.</p></section>:
+    {list.isPending?<Loading/>:list.error?<p role="alert">{list.error.message}</p>:mine.length===0?<section className="panel"><Empty icon="help" title="No reports sent">If something looks wrong, tell us from here.</Empty></section>:
       <div className="cards">{mine.map(i=><article className="panel" key={i.id}>
         <p className="eyebrow">{TYPE_LABEL[i.type]} · {when(i.created_at)}</p><h3>{i.title}</h3>
         <p><span className="badge">{STATUS_LABEL[i.status]}</span></p>
@@ -65,7 +67,7 @@ export function AdminIssues(){
     <div className="actions"><label>Type<select value={kind} onChange={e=>filter(setKind)(e.target.value)}><option value="">All types</option>{Object.entries(TYPE_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
       <label>Search reports<input type="search" value={search} onChange={e=>filter(setSearch)(e.target.value)} placeholder="Title or description"/></label></div>
     {message&&<p role="status">{message}</p>}
-    {list.isPending?<p>Loading…</p>:list.error?<p role="alert">{list.error.message}</p>:list.data.issues.length===0?<section className="panel"><p className="muted">No reports here.</p></section>:
+    {list.isPending?<Loading/>:list.error?<p role="alert">{list.error.message}</p>:list.data.issues.length===0?<section className="panel"><Empty icon="inbox" title="No reports here">Nothing matches this filter.</Empty></section>:
       <>{list.data.issues.map(i=><IssueCard key={i.id+i.updated_at} issue={i} onReview={review}/>)}
       <nav className="actions" aria-label="Pages"><button disabled={page===1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page} of {pages} · {list.data.total} report{list.data.total===1?'':'s'}</span><button disabled={page>=pages} onClick={()=>setPage(page+1)}>Next</button></nav></>}
   </>;

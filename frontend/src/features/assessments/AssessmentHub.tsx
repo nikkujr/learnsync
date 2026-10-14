@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {Link,useOutletContext,useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -11,7 +12,7 @@ export function AssessmentHub(){
   const base=`/faculty/offerings/${offering.id}`;
   const query=useQuery({queryKey:['assessment',assessmentId],queryFn:()=>api<Assessment>(`/teach/offerings/${offering.id}/assessments/${assessmentId}`)});
   const list=useQuery({queryKey:['assessments',offering.id],queryFn:()=>api<(Assessment&{counts?:{total:number;graded:number;turned_in:number;assigned:number;to_return:number}})[]>(`/teach/offerings/${offering.id}/assessments`)});
-  if(query.isPending||list.isPending)return <p>Loading…</p>;
+  if(query.isPending||list.isPending)return <Loading/>;
   const a=query.data;const rev=a?.published;
   if(query.error||!a||!rev)return <section className="panel"><h2>Not available</h2><p role="alert">{query.error?.message??'This has not been published yet.'}</p><Link to={`${base}/classwork`}>Back to classwork</Link></section>;
   const counts=list.data?.find(x=>x.id===a.id)?.counts;

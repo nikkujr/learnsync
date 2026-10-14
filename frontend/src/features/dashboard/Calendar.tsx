@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {useState} from 'react';
 import {Link} from 'react-router-dom';
 import {useQueries,useQuery} from '@tanstack/react-query';
@@ -35,7 +36,7 @@ export function CalendarPage({role}:{role:'student'|'faculty'}){
       <button type="button" className="icon-btn" aria-label="Next month" onClick={()=>step(1)}><span aria-hidden="true">›</span></button>
       <button type="button" onClick={()=>setMonth(new Date(today.getFullYear(),today.getMonth(),1))}>Today</button></div>
     {loading?<p role="status">Loading…</p>:<>
-      {events.length===0&&<p className="muted">Nothing with a due date yet.</p>}
+      {events.length===0&&<Empty icon="calendar" title="Nothing due yet">Work with a due date appears on your calendar.</Empty>}
       <div className="month-head" aria-hidden="true">{DAYS.map(d=><span key={d}>{d}</span>)}</div>
       <ol className="month" aria-label={label}>
         {Array.from({length:first},(_,i)=><li key={'b'+i} className="blank" aria-hidden="true"/>)}

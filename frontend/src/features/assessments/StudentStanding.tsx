@@ -1,3 +1,4 @@
+import {Loading} from '../../components/Loading';
 import {stepLabel} from '../study/types';
 import {useEffect,useRef,useState} from 'react';
 import {Link,useOutletContext,useParams} from 'react-router-dom';
@@ -57,7 +58,7 @@ export function StudentStanding(){
     finally{setBusy('')}
   }
   const back=<p className="back no-print"><Link to={origin.to}>← Back to {origin.label}</Link></p>;
-  if(query.isPending)return <>{back}<p>Loading…</p></>;
+  if(query.isPending)return <>{back}<Loading/></>;
   if(query.error)return <>{back}<section className="panel"><h2>Student unavailable</h2><p role="alert">{query.error.message}</p></section></>;
   const d=query.data;const withdrawn=d.student.enrollment_status==='withdrawn';
   const periods=Object.keys(d.calculation?.grades??d.published).filter(k=>k!=='course').concat('course');
