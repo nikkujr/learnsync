@@ -6,6 +6,7 @@ import {useQuery} from '@tanstack/react-query';
 import {api,post,send,errorText,ApiError,type Account} from '../../app/api';
 import {queryClient} from '../../app/providers';
 import {Dialog} from '../../components/Dialog';
+import {useConfirm} from '../../components/confirm';
 import {yearLabel,type OfferingSummary,type SchoolYear,type Section,type Subject} from './types';
 
 export function TermWorkspace(){
@@ -14,6 +15,8 @@ export function TermWorkspace(){
   const years=useQuery({queryKey:['school-years'],queryFn:()=>api<SchoolYear[]>('/school-years')});
   const sections=useQuery({queryKey:['sections',termId],queryFn:()=>api<Section[]>(`/terms/${termId}/sections`)});
   const offerings=useQuery({queryKey:['offerings',termId],queryFn:()=>api<OfferingSummary[]>(`/terms/${termId}/offerings`)});
+  const ask=useConfirm();
+  const [note,setNote]=useState('');
   const [dialog,setDialog]=useState<'section'|'offering'|null>(null);
   const [editing,setEditing]=useState<OfferingSummary|null>(null);
   const year=years.data?.find(y=>y.terms.some(t=>t.id===termId));
@@ -21,6 +24,17 @@ export function TermWorkspace(){
   const closed=term?.status==='closed';
   const refresh=()=>{queryClient.invalidateQueries({queryKey:['sections',termId]});queryClient.invalidateQueries({queryKey:['offerings',termId]})};
 
+  async function closeTerm(){
+    if(!term||!await ask({title:`Close ${term.name}?`,message:'Teaching records become read-only until it is reopened.',yes:'Close term',danger:true}))return;
+    try{await post(`/terms/${term.id}/close`,{});await queryClient.invalidateQueries({queryKey:['school-years']});setNote('Term closed.')}catch(e){setNote(errorText(e))}
+  }
+  const haveSections=(sections.data?.length??0)>0,haveOfferings=(offerings.data?.length??0)>0,haveStudents=!!offerings.data?.some(o=>o.enrolled>0);
+  const steps=[
+    {done:haveSections,label:'Add the sections',detail:haveSections?`${sections.data!.length} added`:'Sections are the groups of students, such as BSE 1-A.',action:<button className="primary" onClick={()=>setDialog('section')}>Add section</button>},
+    {done:haveOfferings,label:'Assign subjects to teachers',detail:haveOfferings?`${offerings.data!.length} assigned`:'Each subject with its teacher and the sections taking it.',action:<button className="primary" disabled={!haveSections} onClick={()=>setDialog('offering')}>Assign subjects</button>},
+    {done:haveStudents,label:'Place the students',detail:haveStudents?`${offerings.data!.reduce((n,o)=>n+o.enrolled,0)} enrollments`:'Import a list, or add students to a section.',action:<Link className="button primary" to={`/admin/terms/${termId}/import-students`}>Import students</Link>},
+  ];
+  const nextStep=steps.findIndex(x=>!x.done);
   if(years.isPending)return <p>Loading…</p>;
   if(!term)return <section className="panel"><h1>Term not found</h1><Link to="/admin/academics">Back to school years</Link></section>;
   return <>
@@ -28,30 +42,37 @@ export function TermWorkspace(){
     <div className="page-heading">
       <div><p className="eyebrow">{year?.label}</p><h1>{term.name}</h1>
         <span className={`badge ${term.status}`}>{term.status}</span></div>
-      <Link className={offerings.data?.length&&offerings.data.every(o=>o.enrolled===0)?'button primary':'button'} to={`/admin/terms/${termId}/import-students`}>Import students</Link>
+      <div className="actions"><Link className="button" to={`/admin/terms/${termId}/import-students`}>Import students</Link>
+        {!closed&&<button onClick={()=>void closeTerm()}>Close term</button>}</div>
     </div>
+    {note&&<p role="status">{note}</p>}
+    {!closed&&nextStep>=0&&sections.data&&offerings.data&&<section className="panel setup-steps" aria-label="Set up this term"><h2>Set up this term</h2>
+      <ol>{steps.map((x,i)=><li key={x.label} className={x.done?'done':i===nextStep?'next':''}>
+        <span className="step-mark" aria-hidden="true">{x.done?'✓':i+1}</span>
+        <span className="grow"><strong>{x.label}</strong>{x.done&&<span className="sr-only"> (done)</span>}<span className="muted">{x.detail}</span></span>
+        {i===nextStep&&x.action}</li>)}</ol></section>}
     {closed&&<p className="warn" role="status">This term is closed. Reopen it from School years to make changes.</p>}
 
     <section className="panel">
-      <div className="page-heading"><h2>Sections</h2><button className={sections.data?.length===0?'primary':''} disabled={closed} onClick={()=>setDialog('section')}>Add section</button></div>
+      <div className="page-heading"><h2>Sections</h2><button disabled={closed} onClick={()=>setDialog('section')}>Add section</button></div>
       {sections.isPending?<p>Loading…</p>:sections.error?<p role="alert">{sections.error.message}</p>:
         sections.data.length===0?<p className="muted">No sections yet. Add one, or copy structure when creating the school year.</p>:
         <div className="table-wrap"><table><caption className="sr-only">Sections of this term</caption>
           <thead><tr><th scope="col">Section</th><th scope="col">Year level</th><th scope="col">Students</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
-          <tbody>{sections.data.map(s=><tr key={s.id}><th scope="row">{s.name}</th><td>{yearLabel(s.year_level)}</td><td>{s.member_count}</td>
+          <tbody>{sections.data.map(s=><tr key={s.id}><th scope="row"><Link state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{s.name}</Link></th><td>{yearLabel(s.year_level)}</td><td>{s.member_count}</td>
             <td><Link className="button" state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{closed?'View students':'Manage students'}</Link></td></tr>)}</tbody></table></div>}
     </section>
 
     <section className="panel">
-      <div className="page-heading"><h2>Offerings</h2><button className={sections.data?.length&&offerings.data?.length===0?'primary':''} disabled={closed||!sections.data} onClick={()=>setDialog('offering')}>Assign subjects</button></div>
+      <div className="page-heading"><h2>Offerings</h2><button disabled={closed||!sections.data} onClick={()=>setDialog('offering')}>Assign subjects</button></div>
       {offerings.isPending?<p>Loading…</p>:offerings.error?<p role="alert">{offerings.error.message}</p>:
         offerings.data.length===0?<p className="muted">No subjects are assigned yet.</p>:
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Offerings"><table><thead><tr><th>Subject</th><th>Teacher</th><th>Sections</th><th>Enrolled</th><th><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>{offerings.data.map(o=><tr key={o.id}>
-            <td><strong>{o.subject.code}</strong> {o.subject.title}</td><td>{o.faculty.display_name}</td>
+            <td><Link state={here} to={`/admin/offerings/${o.id}`}><strong>{o.subject.code}</strong>{' '}{o.subject.title}</Link></td><td>{o.faculty.display_name}</td>
             <td>{o.sections.map(s=>s.name).join(', ')||'—'}</td><td>{o.enrolled}</td>
-            <td className="actions"><Link className="button" state={here} to={`/admin/offerings/${o.id}`}>Roster</Link>
-              <button disabled={closed} onClick={()=>setEditing(o)}>Edit</button></td></tr>)}</tbody></table></div>}
+            <td><div className="actions"><Link className="button" state={here} to={`/admin/offerings/${o.id}`}>Roster</Link>
+              <button disabled={closed} onClick={()=>setEditing(o)}>Edit</button></div></td></tr>)}</tbody></table></div>}
     </section>
 
     {dialog==='section'&&<SectionDialog termId={term.id} onClose={()=>setDialog(null)} onDone={()=>{setDialog(null);refresh()}}/>}

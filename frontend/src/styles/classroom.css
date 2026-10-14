@@ -385,3 +385,14 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .gb-bar .more>summary,.gb-help>summary{min-height:44px;padding:0 8px;border:0}
 .gb-bar .more[open],.gb-help[open]{flex:1 1 100%}
 .gb-filters .gb-help{margin-left:auto}
+
+/* term workspace: the setup steps */
+.setup-steps ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.setup-steps li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 0;border-top:1px solid var(--border)}
+.setup-steps li:first-child{border-top:0}
+.setup-steps .grow{display:grid;flex:1 1 220px}
+.setup-steps .step-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:2px solid var(--border);font-size:.85rem;font-weight:600;color:var(--muted)}
+.setup-steps li.done .step-mark{background:var(--success,#137333);border-color:transparent;color:#fff}
+.setup-steps li.done .grow strong{color:var(--muted);font-weight:500}
+.setup-steps li.next .step-mark{border-color:var(--action);color:var(--action)}
+.table-wrap td a strong,.table-wrap th[scope=row] a{font-weight:inherit}

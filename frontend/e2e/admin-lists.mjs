@@ -2,7 +2,7 @@
 // pages, withdraw with a reason) and bulk assignment of several subjects to one teacher.
 // SELF-PROVISIONING: creates its own school year, section and students, so run it ONLY against a disposable database with the
 // development accounts (`python -m app.cli seed-demo`). Refuses unless ADMIN_LISTS_E2E_DISPOSABLE=1.
-import {launch,newPage,sessionFor,axe} from './lib.mjs';
+import {launch,newPage,sessionFor,axe,shot} from './lib.mjs';
 if(process.env.ADMIN_LISTS_E2E_DISPOSABLE!=='1'){console.log('Refusing: set ADMIN_LISTS_E2E_DISPOSABLE=1 to confirm this database is disposable.');process.exit(2)}
 const results=[];
 function check(label,ok,detail=''){results.push(ok);console.log(`${ok?'PASS':'FAIL'} ${label}${detail?' - '+detail:''}`)}
@@ -61,7 +61,7 @@ try{
 
   // ---- bulk assignment
   await p.goto(`/admin/terms/${term.id}`);await p.waitForLoadState('networkidle');
-  await p.getByRole('button',{name:'Assign subjects'}).click();
+  await p.locator('section.panel:not(.setup-steps)').getByRole('button',{name:'Assign subjects'}).click();
   const d=p.locator('dialog');
   check('subjects stay locked until a teacher is chosen',await d.getByRole('checkbox',{name:/LST 101/}).isDisabled());
   await d.getByLabel('Teacher').selectOption({label:'Demo faculty 1'});
@@ -76,7 +76,7 @@ try{
   await d.locator('.actions .primary').click();await p.locator('.toast').waitFor();
   const offerings=(await call(p,'GET',`/terms/${term.id}/offerings`)).data.map(o=>`${o.subject.code}:${o.sections.map(s=>s.name)}`).sort();
   check('both subjects were assigned with their sections in one go',offerings.join(' ')==='LST 101:1A LST 201:1A',offerings.join(' '));
-  await p.getByRole('button',{name:'Assign subjects'}).click();await d.getByLabel('Teacher').selectOption({label:'Demo faculty 1'});await d.getByLabel('Filter subjects').fill('LST 101');
+  await p.locator('section.panel:not(.setup-steps)').getByRole('button',{name:'Assign subjects'}).click();await d.getByLabel('Teacher').selectOption({label:'Demo faculty 1'});await d.getByLabel('Filter subjects').fill('LST 101');
   check('a subject the teacher already has is shown as assigned and cannot be picked again',await d.getByRole('checkbox',{name:/LST 101/}).isDisabled());
   check('axe finds no violations on the bulk dialog',(await axe(p)).length===0);
 
@@ -99,6 +99,20 @@ try{
   await p.locator('summary[aria-label^="Notifications"]').click();
   check('the admin bell shows the new report',await p.getByText('New report: Blank page').first().isVisible());
   check('axe finds no violations on the accounts page',await (async()=>{await p.goto('/admin/accounts');await p.waitForLoadState('networkidle');return (await axe(p)).length===0})());
+
+  // ---- term workspace: setup steps guide a new term; the subject opens its roster; Close term lives on the term page
+  const fresh=(await call(p,'POST','/school-years',{label:'2027-2028',start_date:'2027-06-01',end_date:'2028-04-30',terms:[{name:'First Semester',sequence:1,start_date:'2027-06-01',end_date:'2027-10-31'}]})).data.terms[0];
+  await call(p,'POST',`/terms/${fresh.id}/sections`,{name:'9Z',year_level:1});
+  await p.goto(`/admin/terms/${fresh.id}`);await p.waitForLoadState('networkidle');
+  const steps=p.locator('.setup-steps');
+  await shot(p,'term-setup',false);
+  check('a new term shows the setup steps with the next one marked',await steps.count()===1&&await steps.locator('li.done').count()===1&&await steps.locator('li.next').innerText().then(t=>/Assign subjects to teachers/.test(t)));
+  await steps.getByRole('button',{name:'Assign subjects'}).click();await p.getByRole('heading',{name:'Assign subjects'}).waitFor();
+  check('the next step opens its dialog',true);await p.keyboard.press('Escape');
+  await p.getByRole('button',{name:'Close term'}).click();await p.getByRole('button',{name:'Close term'}).last().click();
+  await p.locator('.badge.closed').waitFor();
+  check('Close term on the term page closes it and the setup steps go away',await p.locator('.setup-steps').count()===0&&await p.getByRole('button',{name:'Close term'}).count()===0);
+  {const v=await axe(p);check('axe finds no violations on the term page',v.length===0,JSON.stringify(v).slice(0,500))}
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);
