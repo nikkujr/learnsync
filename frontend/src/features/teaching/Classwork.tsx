@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
 import {Icon} from '../../components/Icon';
 import type React from 'react';
@@ -288,7 +289,7 @@ export function StudentClasswork(){
   const chips=topicChips(catCounts(buildTree(outline,rows)));
   const count=(k:Filter)=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(k==='all'||(k==='todo'?r.todo:r.done))).length;
   return <>
-    {rows.length===0?<section className="panel"><h2>Nothing yet</h2><p>Published lessons, files, links, quizzes and activities appear here.</p></section>:<>
+    {rows.length===0?<section className="panel"><Empty icon="material" title="Nothing here yet">Published lessons, files, links, quizzes and activities appear here.</Empty></section>:<>
       <div className="type-row"><Link className="button" to={`${base}/syllabus`}>Syllabus</Link><Link className="button" to={`${base}/your-work`}>View your work</Link></div>
       {cat!=='all'&&<p className="filter-note muted">Showing {CATS.find(c=>c[0]===cat)?.[1]?.toLowerCase()} only. <Link to={`${base}/classwork`}>Show everything</Link></p>}
       <div className="cw-bar">

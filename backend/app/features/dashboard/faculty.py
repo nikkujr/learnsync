@@ -12,9 +12,23 @@ from app.features.assessments.definitions import revision
 from app.features.assessments.models import Assessment, AssessmentRevision, GradeReviewState
 from app.features.assessments.scores import targeted_students
 from app.features.study import progress
+from app.features.study.models import LearningEvent
 from app.features.teaching.models import LearningItem, LearningItemRevision
 
 DEADLINE_DAYS = 14
+
+
+def week_activity(db, offering):
+    """Valid learning events (lesson completions and submissions) per day for the last 7 days, oldest first."""
+    today = now().date()
+    since = now() - timedelta(days=6)
+    start = since.replace(hour=0, minute=0, second=0, microsecond=0)
+    days = {today - timedelta(days=i): 0 for i in range(6, -1, -1)}
+    for at in db.scalars(select(LearningEvent.occurred_at).where(LearningEvent.offering_id == offering.id,
+                                                                  LearningEvent.occurred_at >= start)):
+        if at.date() in days:
+            days[at.date()] += 1
+    return list(days.values())
 
 
 def offering_card(db, offering, summary):
@@ -53,7 +67,7 @@ def offering_card(db, offering, summary):
             "sections": [s["name"] for s in summary["sections"]], "students": summary["enrolled"],
             "term": summary["term"], "drafts_content": drafts_content, "drafts_assessments": drafts_assessments,
             "to_grade": to_grade, "needs_review": review, "average_progress": prog["average_percent"],
-            "quiet_students": prog["inactive_count"], "first_to_grade": first_to_grade, "deadlines": deadlines,
+            "quiet_students": prog["inactive_count"], "activity": week_activity(db, offering), "first_to_grade": first_to_grade, "deadlines": deadlines,
             "queue": queue}
 
 

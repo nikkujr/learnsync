@@ -233,3 +233,14 @@ def test_the_review_queue_lists_waiting_activity_submissions_across_subjects_old
     assert TestClient(app).get("/api/dashboard/faculty/review").status_code == 401
     assert graded["admin"].post(f"/api/terms/{graded['term']['id']}/close").status_code in (200, 204)
     assert graded["fac"].get("/api/dashboard/faculty/review").json()["total"] == 0                 # a closed term has nothing to review
+
+
+def test_the_teacher_home_carries_a_seven_day_activity_line_per_subject(graded):
+    from test_activities import submit_pdf
+    from test_assessments import iso, make_manual
+    fac = graded["fac"]
+    card = lambda: fac.get("/api/dashboard/faculty").json()["subjects"][0]
+    assert card()["activity"] == [0] * 7
+    aid = make_manual(graded, "activity", "Busy week", points="10", category_key="activity", deadline=iso(24))
+    assert submit_pdf(graded["st1"], graded, aid).status_code == 201
+    assert len(card()["activity"]) == 7 and card()["activity"][-1] == 1            # today is the last day

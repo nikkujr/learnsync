@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
 import {stepLabel} from '../study/types';
 import {useEffect,useRef,useState} from 'react';
@@ -104,7 +105,7 @@ export function StudentStanding(){
     </details>
 
     <details className="panel fold"><summary><h3>Attendance</h3></summary>
-      {d.attendance.days.length===0?<p className="muted">No attendance has been recorded for this student’s section yet.</p>:<>
+      {d.attendance.days.length===0?<Empty icon="calendar" title="No attendance recorded">Nothing has been recorded for this student’s section yet.</Empty>:<>
         <div className="table-wrap" role="region" tabIndex={0} aria-label="Attendance totals"><table><thead><tr><th>Period</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>Not marked</th></tr></thead>
           <tbody>{Object.entries(counts).map(([p,c])=><tr key={p}><td>{PERIOD_LABEL[p]??p}</td><td>{c.present}</td><td>{c.late}</td><td>{c.absent}</td><td>{c.excused}</td><td>{c.not_marked}</td></tr>)}</tbody></table></div>
         <details className="fold inner"><summary>Day by day ({d.attendance.days.length})</summary><ul className="seq">{[...d.attendance.days].reverse().map(x=><li key={x.date}><span className="grow">{day(x.date)}<span className="muted">{PERIOD_LABEL[x.period]}</span></span><span className="badge">{x.status?MARK[x.status]:'Not marked'}</span></li>)}</ul></details></>}

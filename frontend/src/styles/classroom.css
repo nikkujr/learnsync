@@ -416,10 +416,10 @@ details[open]>.menu-list{animation:pop .14s var(--ease)}
 .skeleton{display:grid;gap:10px;padding:8px 0}
 .skeleton i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--surface-alt) 25%,var(--border) 50%,var(--surface-alt) 75%);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
-.empty{display:grid;justify-items:center;gap:6px;padding:28px 16px;text-align:center}
+.empty{display:grid;justify-items:center;gap:var(--space-2);padding:var(--space-5) var(--space-4);text-align:center}
 .empty strong{font-size:1.05rem;font-weight:600}
 .empty p{margin:0;max-width:42ch}
-.empty .actions{margin-top:8px;justify-content:center}
+.empty .actions{margin-top:var(--space-2);justify-content:center}
 .empty-art{display:grid;place-items:center;width:64px;height:64px;margin-bottom:6px;border-radius:50%;color:var(--accent-ink);background:var(--accent-soft);box-shadow:0 0 0 10px color-mix(in srgb,var(--accent-soft) 45%,transparent),0 0 0 22px color-mix(in srgb,var(--accent-soft) 22%,transparent)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.class-card:hover{transform:none}}
 
@@ -435,7 +435,7 @@ details[open]>.menu-list{animation:pop .14s var(--ease)}
 @media(max-width:760px){.auth-brand{padding:24px}.auth-points{display:none}}
 
 /* home: greeting and today's numbers */
-.home-today{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;margin:0 0 20px;padding:18px 22px;border-radius:var(--radius);background:linear-gradient(120deg,var(--accent-soft),var(--surface) 70%);border:1px solid var(--border);box-shadow:var(--shadow-1)}
+.home-today{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3) var(--space-5);margin:0 0 var(--space-5);padding:var(--space-4) var(--space-5);border-radius:var(--radius);background:linear-gradient(120deg,var(--accent-soft),var(--surface) 70%);border:1px solid var(--border);box-shadow:var(--shadow-1)}
 .home-today h2{margin:0;font-size:1.35rem;font-weight:600}
 .home-today p{margin:2px 0 0}
 .home-today ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
@@ -466,3 +466,31 @@ details[open]>.menu-list{animation:pop .14s var(--ease)}
 .swatch.art>span:not(.sr-only){width:84px;border-radius:10px}
 .swatch input:checked+span{outline:3px solid var(--action);outline-offset:2px}
 .swatch input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+
+/* who posted it */
+.post-avatar{position:relative;grid-row:1/3;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;color:#fff;font-size:.9rem;font-weight:600}
+.post-kind{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface);color:var(--text);box-shadow:0 0 0 1.5px var(--border)}
+.composer-card .post-avatar{grid-row:auto;flex:none}
+
+/* grade visuals */
+.gbar{display:block;width:72px;height:6px;margin-top:4px;border-radius:3px;background:var(--surface-alt);overflow:hidden}
+.gbar i{display:block;height:100%;border-radius:3px;background:var(--success)}
+.gbar.low i{background:var(--danger)}
+.person-cell .gbar{width:100%}
+.dist{margin:8px 0 16px;max-width:520px}
+.dist-bars{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;gap:10px;height:120px;padding-top:18px}
+.dist-bars>div{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:0}
+.dist-bars i{display:block;width:100%;max-width:56px;min-height:3px;border-radius:6px 6px 0 0;background:var(--action);transition:height .4s var(--ease)}
+.dist-bars .low i{background:var(--danger)}
+.dist-n{font-size:.85rem;font-weight:600;margin-bottom:2px}
+.dist-l{margin-top:4px;color:var(--muted);font-size:.75rem;white-space:nowrap}
+.dist figcaption{margin-top:4px;font-size:.8rem}
+.look-colors,.look-arts{gap:8px}
+.swatch>span:not(.sr-only){width:40px;height:40px}
+.swatch.art>span:not(.sr-only){width:76px}
+.swatch{min-width:40px}
+.spark{display:flex;align-items:center;gap:10px;font-size:.8rem}
+.spark svg{flex:none}
+.spark-line{stroke:var(--action);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.spark-fill{fill:var(--action);opacity:.12}
+.spark-dot{fill:var(--action)}

@@ -1,3 +1,4 @@
+import {Sparkline} from '../../components/Sparkline';
 import {Icon,type IconName} from '../../components/Icon';
 import {Empty} from '../../components/Empty';
 import {useEffect,useRef} from 'react';
@@ -81,7 +82,7 @@ export function StudentHome(){
             {d.another_attempt.length>0&&<><h3>Another attempt available</h3><ul className="rows">{d.another_attempt.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}>{w.title}</Link><span className="muted">{w.subject} · {plural(w.attempts_left??0,'attempt')} left</span></li>)}</ul></>}
           </section>}
           <section className="panel"><h2>Course updates</h2>
-            {d.updates.length===0?<p className="muted">No updates in the last 30 days.</p>:<ul className="rows updates">{d.updates.map((u,i)=><li key={i}><span className="eyebrow">{UPDATE_LABEL[u.type]??u.type} · {when(u.at)}{Date.parse(u.at)>seenBefore.current&&<> · <span className="badge">New</span></>}</span><Link state={here} to={u.link}>{u.title}</Link><span className="muted">{u.subject}</span></li>)}</ul>}
+            {d.updates.length===0?<Empty icon="inbox" title="No recent updates">New lessons, results and announcements appear here.</Empty>:<ul className="rows updates">{d.updates.map((u,i)=><li key={i}><span className="eyebrow">{UPDATE_LABEL[u.type]??u.type} · {when(u.at)}{Date.parse(u.at)>seenBefore.current&&<> · <span className="badge">New</span></>}</span><Link state={here} to={u.link}>{u.title}</Link><span className="muted">{u.subject}</span></li>)}</ul>}
           </section>
 
         </div>
@@ -90,7 +91,7 @@ export function StudentHome(){
 }
 
 /** A Classroom-style class card: coloured header with title, section and teacher, a round avatar, a short body and shortcuts. The whole header opens the class. */
-export function SubjectCard({id,title,section,teacher,meta,progress,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;detail?:string;to:string;links:[string,string][]}){
+export function SubjectCard({id,title,section,teacher,meta,progress,activity,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;activity?:number[];detail?:string;to:string;links:[string,string][]}){
   const here=useHere();
   const look=useLook()(id);
   return <article className="class-card" style={{'--cc':look.color} as React.CSSProperties}>
@@ -98,7 +99,8 @@ export function SubjectCard({id,title,section,teacher,meta,progress,detail,to,li
     <span className="class-avatar" aria-hidden="true">{initials(teacher||title)}</span>
     <div className="class-body">{meta&&<p><strong>{meta}</strong></p>}
       {progress!==undefined&&progress!==null&&<div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div>}
-      {detail&&<p>{detail}</p>}</div>
+      {detail&&<p>{detail}</p>}
+      {activity&&<Sparkline values={activity} label={`${title} activity`}/>}</div>
     <div className="class-foot">{links.map(([l,h])=><Link key={h} state={here} to={h}>{l}</Link>)}</div></article>;
 }
 
@@ -111,7 +113,7 @@ function Today({name,line,tiles}:{name:string;line:string;tiles:{icon:IconName;n
 }
 
 // ---------------------------------------------------------------- faculty
-interface FacultyHomeData{name:string;subjects:{offering_id:string;code:string;title:string;sections:string[];students:number;term:string;drafts_content:number;drafts_assessments:number;to_grade:number;needs_review:number;average_progress:number|null;quiet_students:number}[];
+interface FacultyHomeData{name:string;subjects:{offering_id:string;code:string;title:string;sections:string[];students:number;term:string;drafts_content:number;drafts_assessments:number;to_grade:number;needs_review:number;average_progress:number|null;quiet_students:number;activity:number[]}[];
   closed_subjects:number;task:{headline:string;detail:string;action:string;link:string;icon:string}|null;queue:{title:string;count:number;subject:string;link:string}[];review_link:string|null;deadlines:{title:string;deadline:string;subject:string;link:string}[];
   totals:{subjects:number;students:number;to_grade:number;needs_review:number;drafts:number}}
 
@@ -127,7 +129,7 @@ export function FacultyHome(){
       <section aria-labelledby="my-subjects-h"><h2 id="my-subjects-h" className="sr-only">Your classes</h2>
         {d.subjects.length===0?<section className="panel"><Empty icon="school" title="No classes yet">No subject is assigned to you in an open term. Your administrator assigns them in the term workspace.</Empty></section>:<div className="class-grid">{d.subjects.map(s=>{
           const o=`/faculty/offerings/${s.offering_id}`;const drafts=s.drafts_content+s.drafts_assessments;
-          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={s.sections.join(', ')||'No sections'} teacher={d.name} meta={s.to_grade?`${s.to_grade} to grade`:undefined} progress={s.average_progress}
+          return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={s.sections.join(', ')||'No sections'} teacher={d.name} meta={s.to_grade?`${s.to_grade} to grade`:undefined} progress={s.average_progress} activity={s.activity}
             detail={`${plural(s.students,'student')}${s.needs_review?` · ${s.needs_review} to review`:''}${drafts?` · ${plural(drafts,'draft')}`:''}`}
             to={`${o}/stream`} links={[['Classwork',`${o}/classwork`],['Grades',`${o}/gradebook`]]}/>})}</div>}
         <p><Link state={here} className="touch" to="/faculty/subjects">{d.closed_subjects?`All subjects, including ${plural(d.closed_subjects,'past one')}`:'All subjects'}</Link></p></section>
@@ -139,7 +141,7 @@ export function FacultyHome(){
         <div className="dash-side">
           {d.queue.length>0&&<section className="panel"><h2>Activity submissions needing grading</h2><p className="muted">Top 5 by number awaiting grading. <Link state={here} className="touch" to="/faculty/review">See everything to review</Link></p><ul className="rows">{d.queue.map((q,i)=><li key={i}><Link state={here} to={q.link}>{q.title}</Link><span className="muted">{q.subject} · {plural(q.count,'submission')} waiting</span></li>)}</ul></section>}
           <section className="panel"><h2>Upcoming deadlines</h2>
-            {d.deadlines.length===0?<p className="muted">No deadlines in the next two weeks.</p>:<ul className="rows">{d.deadlines.map((x,i)=><li key={i}><Link state={here} to={x.link}>{x.title}</Link><span className="muted">{x.subject} · {dateTime(x.deadline)}</span></li>)}</ul>}</section>
+            {d.deadlines.length===0?<Empty icon="calendar" title="No deadlines soon">Nothing is due in the next two weeks.</Empty>:<ul className="rows">{d.deadlines.map((x,i)=><li key={i}><Link state={here} to={x.link}>{x.title}</Link><span className="muted">{x.subject} · {dateTime(x.deadline)}</span></li>)}</ul>}</section>
           <section className="panel"><h2>Student progress</h2>
             {d.subjects.length===0?<p className="muted">Appears when you have subjects.</p>:<ul className="rows">{d.subjects.map(s=><li key={s.offering_id}><Link state={here} to={`/faculty/offerings/${s.offering_id}/progress`}>{s.code}</Link>
               <span className="muted">{s.average_progress===null?'No completable steps yet':`Average completion ${s.average_progress}%`}{s.quiet_students?` · ${plural(s.quiet_students,'enrolled student')} with no recorded learning activity in the last 7 days`:''}</span></li>)}</ul>}
@@ -177,13 +179,13 @@ export function AdminHome(){
             :<Hero eyebrow="Needs your attention" title="Nothing needs attention" detail="No open reports, pending invitations or unconfirmed imports." icon="✓"/>}
           <Stats items={[[d.accounts.students,'Active students','/admin/accounts?role=student&status=active'],[d.accounts.faculty,'Active faculty','/admin/accounts?role=faculty&status=active'],[d.accounts.inactive,'Inactive accounts','/admin/accounts?status=inactive'],[d.subjects,'Subjects in the catalog','/admin/subjects']]}/>
           <section className="panel"><h2>Open terms</h2>
-            {d.terms.length===0?<p className="muted">No term is open. Create a school year and its terms in academic setup.</p>:
+            {d.terms.length===0?<Empty icon="term" title="No open term" action={<Link className="button primary" to="/admin/academics">School years and terms</Link>}>Create a school year and its terms to get started.</Empty>:
               <div className="table-wrap" tabIndex={0} role="region" aria-label="Open terms"><table><thead><tr><th>Term</th><th>Sections</th><th>Offerings</th><th>Students</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>
                 {d.terms.map(t=><tr key={t.id}><td>{t.name}<br/><span className="muted">{t.school_year}</span></td><td>{t.sections}</td><td>{t.offerings}</td><td>{t.students}</td><td><Link state={here} to={`/admin/terms/${t.id}`}>Open</Link></td></tr>)}</tbody></table></div>}</section>
         </div>
         <div className="dash-side">
           <section className="panel"><h2>Recent account activity</h2>
-            {d.recent_activity.length===0?<p className="muted">No account activity yet.</p>:<ul className="rows updates">{d.recent_activity.map((a,i)=><li key={i}><strong>{ACTION_LABEL[a.action]??a.action.replace('account.','').replace(/_/g,' ')}</strong><span className="muted">{a.who} · {dateTime(a.at)}</span></li>)}</ul>}</section>
+            {d.recent_activity.length===0?<Empty icon="people" title="No account activity">Invitations and changes appear here.</Empty>:<ul className="rows updates">{d.recent_activity.map((a,i)=><li key={i}><strong>{ACTION_LABEL[a.action]??a.action.replace('account.','').replace(/_/g,' ')}</strong><span className="muted">{a.who} · {dateTime(a.at)}</span></li>)}</ul>}</section>
           <section className="panel"><h2>Reports</h2><p className="muted">{plural(d.issues.open,'open report')}{d.issues.in_progress?`, ${d.issues.in_progress} being looked at`:''}.</p><Link state={here} className="button" to="/admin/issues">Open reports</Link></section>
         </div>
       </div></>;

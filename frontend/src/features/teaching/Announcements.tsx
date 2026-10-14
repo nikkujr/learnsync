@@ -5,6 +5,7 @@ import {useOutletContext} from 'react-router-dom';
 import {useInfiniteQuery} from '@tanstack/react-query';
 import {api,post,send,errorText} from '../../app/api';
 import {queryClient} from '../../app/providers';
+import {PostAvatar} from '../../components/PostAvatar';
 import {useConfirm} from '../../components/confirm';
 import {Dialog} from '../../components/Dialog';
 import type {OfferingSummary} from '../academics/types';
@@ -28,12 +29,12 @@ export function FacultyAnnouncements(){
   }
   const names=(ids:string[])=>ids.length===0?'All sections':ids.map(id=>offering.sections.find(s=>s.id===id)?.name??'').join(', ');
   return <>
-    <button type="button" className="composer-card" disabled={closed} onClick={()=>{setMessage('');setEditing('new')}}><span className="post-icon announcement" aria-hidden="true">✉</span>Announce something to your class</button>
+    <button type="button" className="composer-card" disabled={closed} onClick={()=>{setMessage('');setEditing('new')}}><PostAvatar name={offering.faculty.display_name} kind="announcement" offeringId={offering.id}/>Announce something to your class</button>
     {message&&<p role="alert">{message}</p>}
     {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:
       rows.length===0?null:
       <>{rows.map(a=><article className="panel post" key={a.id}>
-        <span className="post-icon announcement" aria-hidden="true">✉</span>
+        <PostAvatar name={offering.faculty.display_name} kind="announcement" offeringId={offering.id}/>
         <div className="post-head"><h3>{a.title}</h3><span className="muted">{a.state==='draft'?'Draft':'Published'} · {names(a.section_ids)}</span></div><p className="post-body pre">{a.body}</p>
         <div className="actions post-body">
           {a.state==='draft'&&<><button disabled={closed} onClick={()=>setEditing(a)}>Edit</button><button className="primary" disabled={closed} onClick={()=>act(a,'publish')}>Publish</button></>}

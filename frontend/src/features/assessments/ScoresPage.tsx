@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
@@ -83,7 +84,7 @@ function ScoreTable({rows,kind,base,max,closed,onSaved,setMessage,current,headin
   }
   const row=rows.find(r=>r.student_id===selected)??shown[0]??rows[0];
   const status=(r:ScoreRow)=>r.excused?'Excused':!ungraded(r)?`${fmt(r.score)} / ${fmt(max)}`:r.score!==null?'Resubmitted':kind==='activity'?(r.latest?'Turned in':'Assigned'):'Not scored';
-  if(rows.length===0)return <section className="panel"><h3>{heading}</h3><p className="muted">No students to show.</p></section>;
+  if(rows.length===0)return <section className="panel"><h3>{heading}</h3><Empty icon="people" title="No students to show">Nobody matches this view.</Empty></section>;
   const at=row?shown.findIndex(r=>r.student_id===row.student_id):-1;
   const nextId=at>=0?shown[at+1]?.student_id:undefined;
   return <section className="panel" aria-label={heading}><h3>{heading}</h3>
@@ -173,7 +174,7 @@ function Attempts({base,attempts,closed,onChanged,setMessage}:{base:string;attem
   }
   return <section className="panel"><div className="page-heading"><h3>Attempts</h3>
     {open>0&&<button disabled={closed} onClick={closeOpen}>Close {open} open attempt{open===1?'':'s'}</button>}</div>
-    {attempts.isPending?<Loading/>:attempts.error?<p role="alert">{attempts.error.message}</p>:attempts.data.length===0?<p className="muted">No student has started this quiz yet.</p>:
+    {attempts.isPending?<Loading/>:attempts.error?<p role="alert">{attempts.error.message}</p>:attempts.data.length===0?<Empty icon="quiz" title="No attempts yet">Attempts appear here as students start the quiz.</Empty>:
       <div className="table-wrap" role="region" aria-label="Attempts" tabIndex={0}><table><thead><tr><th>Student</th><th>Attempt</th><th>Status</th><th>Score</th><th>Submitted</th><th><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{attempts.data.map(x=><tr key={x.id}><td>{x.student}</td><td>{x.attempt_number}</td><td><span className="badge">{x.state==='submitted'?'Submitted':'In progress'}</span></td>
           <td>{x.state==='submitted'?`${fmt(x.score)} / ${fmt(x.max_score)}`:'—'}</td><td>{when(x.submitted_at)}</td>

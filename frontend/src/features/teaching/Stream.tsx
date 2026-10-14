@@ -1,5 +1,7 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
-import {Icon,type IconName} from '../../components/Icon';
+import {type IconName} from '../../components/Icon';
+import {PostAvatar} from '../../components/PostAvatar';
 import {Link,useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {api} from '../../app/api';
@@ -32,7 +34,7 @@ export function FacultyStream(){
       {soon.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{soon.map(a=><li key={a.id}><Link to={`${base}/assessments/${a.id}`}>{assessmentTitle(a)}</Link><span className="muted">Due {day(a.published!.deadline!)}</span></li>)}</ul>}</section></aside>
     <div className="stream-feed">
       <FacultyAnnouncements/>
-      {recent.map(r=><article className="panel post" key={r.key}><span className="post-icon" ><Icon name={ICON[r.kind]??'activity'} size={20}/></span>
+      {recent.map(r=><article className="panel post" key={r.key}><PostAvatar name={offering.faculty.display_name} kind={ICON[r.kind]??'activity'} offeringId={offering.id}/>
         <div className="post-head"><h3>You posted a new {r.kind.toLowerCase()}</h3><time dateTime={r.at}>{day(r.at)}</time></div><p className="post-body"><Link className="post-link" to={r.to}>{r.title}</Link></p></article>)}
       {recent.length===0&&<p className="muted">Lessons, files, links and assessments you publish appear here.</p>}
     </div></div>;
@@ -64,8 +66,8 @@ export function StudentStream(){
     <aside className="stream-side" aria-label="Upcoming"><section className="panel"><h2>Upcoming</h2>
       {mine.length===0?<p className="muted">Nothing is due soon.</p>:<ul className="upcoming-list">{mine.map(w=><li key={w.assessment_id}><Link to={workLink(w)}>{w.title}</Link><span className="muted">Due {day(w.deadline!)}</span></li>)}</ul>}
       <Link className="touch" to="/student/todo">View all</Link></section></aside>
-    <div className="stream-feed">{feed.length===0?<section className="panel"><h2>Nothing yet</h2><p className="muted">Announcements, new lessons and released results from your teacher appear here.</p></section>
-      :feed.map(e=><article className="panel post" key={e.key}><span className={`post-icon${e.icon==='announcement'?' announcement':''}`} ><Icon name={e.icon} size={20}/></span>
+    <div className="stream-feed">{feed.length===0?<section className="panel"><Empty icon="announcement" title="Nothing yet">Announcements, new lessons and released results from your teacher appear here.</Empty></section>
+      :feed.map(e=><article className="panel post" key={e.key}><PostAvatar name={e.icon==='announcement'||e.icon==='material'?offering.faculty.display_name:undefined} kind={e.icon} offeringId={offering.id}/>
         <div className="post-head"><h3>{e.type}</h3><time dateTime={e.at}>{day(e.at)}</time></div>
         {e.body?<p className="post-body pre"><strong>{e.title}</strong>{'\n'}{e.body}</p>:<p className="post-body"><Link className="post-link" to={e.to!}>{e.title}</Link></p>}</article>)}</div></div>;
 }

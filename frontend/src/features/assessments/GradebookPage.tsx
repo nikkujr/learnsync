@@ -1,3 +1,4 @@
+import {GradeBar} from '../../components/GradeBar';
 import {Loading} from '../../components/Loading';
 import {useToast} from '../../components/undo';
 import {useRef,useState} from 'react';
@@ -113,7 +114,7 @@ export function GradebookPage(){
             {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><th key={c.id}><Link state={here} to={`/faculty/offerings/${offering.id}/assessments/${c.id}/scores`} title="Open this assessment's scores and attempts">{c.title}</Link><br/><span className="muted">Out of {fmt(c.max_points)}</span><br/><span className="muted">{label(c.category_key)}</span></th>),<th key={p+'g'}>Grade</th>])}
             <th>Grade</th></tr></thead>
         <tbody>{rows.map((r,rowIndex)=><tr key={r.student_id}>
-          <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}{r.grades.course?.grade!=null?` · Overall ${fmt(r.grades.course.grade)}`:''}</span></span></span></th>
+          <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}{r.grades.course?.grade!=null?` · Overall ${fmt(r.grades.course.grade)}`:''}</span>{r.grades.course?.grade!=null&&<GradeBar value={Number(r.grades.course.grade)}/>}</span></span></th>
           {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} deadline={c.deadline} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
             onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)} nav={{col:c.id,row:rowIndex}}
             onCommit={()=>void commit(c.id,r.student_id)} onRevert={()=>revert(c.id,r.student_id)} onMove={d=>focusCell(c.id,rowIndex+d)}/></td>),

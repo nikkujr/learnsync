@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
 import {useEffect,useRef,useState,type KeyboardEvent,type MutableRefObject} from 'react';
 import {useOutletContext} from 'react-router-dom';
@@ -185,7 +186,7 @@ function GridView({offering,sectionId,setSectionId,query,setMode}:ViewProps){
       <p role="status" className="muted">{closed?'This term is closed, so attendance is read-only.':status==='saved'?'All changes saved.':status==='saving'?'Saving…':status==='failed'?`${unsaved} change${unsaved===1?'':'s'} not saved. Use Retry below.`:'Saving in a moment…'}</p>
       {Object.entries(errors).map(([d,m])=><p key={d} role="alert" className="error">{pretty(d)}: {m} <button onClick={()=>void flush(d)}>Retry</button></p>)}
     </section>
-    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:roster.length===0?<section className="panel"><p className="muted">No students are enrolled through this section.</p></section>:
+    {query.isPending?<Loading/>:query.error?<p role="alert">{query.error.message}</p>:roster.length===0?<section className="panel"><Empty icon="people" title="No students in this section">Nobody is enrolled through this section yet.</Empty></section>:
       <section className="panel"><div className="table-wrap" role="region" aria-label="Attendance grid, scrolls sideways" tabIndex={0}>
         <table className="att-grid" ref={table}><caption className="sr-only">Attendance: students down, dates across. Use the arrow keys to move between cells, then P, L, A or E to mark and Delete to clear. Enter or Space changes the status.</caption>
           <thead><tr><th scope="col" className="sticky">Student</th>{dates.map(d=>{const rec=byDate.get(d);const marked=roster.filter(r=>valueOf(d,r.student_id)!==null).length;
@@ -264,7 +265,7 @@ function Register({offering,sectionId,date,period,roster,initial,closed,setMessa
   }
   const dirty=JSON.stringify(Object.entries(marks).filter(([,v])=>v).sort())!==JSON.stringify(Object.entries(initial).filter(([,v])=>v).sort());
   useEffect(()=>{unsaved.current=dirty;return()=>{unsaved.current=false}},[dirty,unsaved]);
-  if(roster.length===0)return <section className="panel"><p className="muted">No students are enrolled through this section.</p></section>;
+  if(roster.length===0)return <section className="panel"><Empty icon="people" title="No students in this section">Nobody is enrolled through this section yet.</Empty></section>;
   const count=(v:string)=>roster.filter(r=>(marks[r.student_id]??'')===v).length;
   return <section className="panel"><div className="page-heading"><h3>Mark attendance for {date}</h3>
     <div className="actions"><button disabled={closed} onClick={()=>setMarks(Object.fromEntries(roster.map(r=>[r.student_id,'present'])))}>Mark everyone present</button>

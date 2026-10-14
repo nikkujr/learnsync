@@ -1,3 +1,4 @@
+import {Empty} from '../../components/Empty';
 import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {Link,useOutletContext} from 'react-router-dom';
@@ -7,6 +8,7 @@ import {useHere} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
 import {ExportPanel} from '../exports/ExportPanel';
 import {PERIOD_LABEL,fmt} from './types';
+import {GradeBar,Distribution} from '../../components/GradeBar';
 
 interface Standing{banner:string|null;meta:[string,string][];notes:string[];columns:string[];rows:(string|number|null)[][];student_ids:string[];
   counts:Record<string,number>;ranking:{scope:string;ranked:number;unranked:number;passed:number;average:number|null;highest:number|null;lowest:number|null}}
@@ -38,15 +40,16 @@ export function ClassStandingPage(){
       <section className="panel" aria-labelledby="rank-h"><h3 id="rank-h">{PERIOD_LABEL[period]??period}: {d.ranking.scope}</h3>
         <p role="status"><strong>{d.ranking.ranked} ranked</strong> · {d.ranking.unranked} awaiting {basis==='published'?'publication':'calculation'}{d.ranking.ranked>0&&<> · average {fmt(d.ranking.average)} · highest {fmt(d.ranking.highest)} · lowest {fmt(d.ranking.lowest)} · {d.ranking.passed} passed <span className="muted">(of the {d.ranking.ranked} ranked)</span></>}</p>
         <p className="muted">Ties share a rank (1, 2, 2, 4). A student without a {basis==='published'?'published':'complete'} grade is not ranked, which is different from a grade of zero. Search only filters this list; it never changes a rank.{mixed&&' Releases here were made under different grading policy versions and are ranked as recorded.'}</p>
+        {d.ranking.ranked>0&&<Distribution title={`${PERIOD_LABEL[period]??period} grades of ${d.ranking.ranked} ranked students`} values={d.rows.map(r=>r[grade]).filter((v):v is number=>typeof v==='number')}/>}
         <label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or student number"/></label>
-        {rows.length===0?<p className="muted">No students match.</p>:
+        {rows.length===0?<Empty icon="people" title="No students match">Try a different name or number.</Empty>:
         <div className="table-wrap" role="region" tabIndex={0} aria-label="Class standing, scrolls sideways"><table>
           <thead><tr><th scope="col">Rank</th><th scope="col" className="sticky">Student</th><th scope="col">Section</th>{d.columns.slice(4,grade).map(c=><th key={c} scope="col">{c}</th>)}<th scope="col">Grade</th><th scope="col">Remark</th><th scope="col">Status</th></tr></thead>
           <tbody>{rows.map(({r,id})=><tr key={id}>
             <td><strong>{r[0]===null?'—':r[0]}</strong></td>
             <th scope="row" className="sticky"><Link state={here} to={`/faculty/offerings/${offering.id}/students/${id}`}>{r[2]}</Link><br/><span className="muted">{r[1]}</span></th>
             <td>{r[3]}</td>{r.slice(4,grade).map((v,i)=><td key={i}>{typeof v==='number'?fmt(v):v??'—'}</td>)}
-            <td><strong>{typeof r[grade]==='number'?fmt(r[grade] as number):'—'}</strong></td><td>{r[grade+1]||'—'}</td><td className="muted">{r[grade+2]}</td></tr>)}</tbody></table></div>}
+            <td><strong>{typeof r[grade]==='number'?fmt(r[grade] as number):'—'}</strong>{typeof r[grade]==='number'&&<GradeBar value={r[grade] as number} pass={!/fail/i.test(String(r[grade+1]??''))}/>}</td><td>{r[grade+1]||'—'}</td><td className="muted">{r[grade+2]}</td></tr>)}</tbody></table></div>}
       </section>}
     <ExportPanel offering={offering} periods={periods} initial={{period,basis,section}} ranked/>
   </>;
