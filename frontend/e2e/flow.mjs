@@ -239,7 +239,7 @@ try{
   await stud.locator('.chat-item').first().click();
   await stud.getByRole('button',{name:'Delete conversation'}).click();
   await stud.locator('dialog').getByRole('button',{name:'Delete conversation'}).click();
-  await stud.getByText('No conversations yet.').waitFor();
+  await stud.getByText('No conversations yet').waitFor();
   check('a student deletes a whole study conversation',((await call(stud,'GET',`/learn/offerings/${O}/study/conversations`)).data.items).length===0);
   check('the old Study help address lands on the Study buddy page',stud.url().includes('/student/study-buddy?subject='+O));
   await stud.goto('/student');await stud.locator('.buddy-launch').waitFor();
@@ -301,7 +301,7 @@ try{
   await stud.getByRole('button',{name:'Send report'}).click();
   await stud.getByText('Your report was sent').waitFor();
   await admin.goto('/admin/issues');
-  await admin.getByText('Quiz timer is confusing').waitFor();
+  await admin.locator('main').getByText('Quiz timer is confusing').waitFor();
   await admin.getByLabel('Note for the reporter').fill('Thanks - we will add a visible timer.');
   await admin.getByRole('button',{name:'Mark as resolved'}).click();
   await admin.getByText('Saved.').waitFor();

@@ -81,3 +81,7 @@ No new endpoint: `PUT /api/teach/offerings/{id}/attendance` has always been a PA
 
 ## Admin notices (2026-10-14)
 `notifications.service.notify_admins(db, kind, title, link, detail)` writes a notice for every active administrator. Used by `support.issues.create` (kind `report`, link `/admin/issues`) and `accounts.commands.consume_token` for accepted invitations (kind `accepted`, link `/admin/accounts?role=...`). No schema change.
+
+## Class themes and the activity line (2026-10-14)
+- Migration `e1b4c6d8f203`: `offering.theme_color` and `offering.theme_art` (small integers, null = derived). `GET /api/me/class-themes` returns `{offering_id: {color, art}}` for the classes the caller teaches or is enrolled in (all for an admin) where a look was chosen; `PUT /api/teach/offerings/{id}/theme` `{color, art}` (the offering's own teacher; 422 outside 0-9 and 0-5; allowed in a closed term). The limits live in `academics/themes.py` and `components/classes.tsx`.
+- `GET /api/dashboard/faculty`: each subject carries `activity`, seven daily counts (oldest first, today last) of valid learning events for that offering.

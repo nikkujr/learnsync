@@ -8,6 +8,8 @@ import {useUnread} from './seen';
 import {StudyBuddy} from '../features/study/StudyBuddy';
 import {useConfirm} from './confirm';
 import {Icon,type IconName} from './Icon';
+import {CommandPalette,type Command} from './CommandPalette';
+import {Tour,shouldAutoTour} from './Tour';
 import {initials,useClasses,useLook} from './classes';
 import {NotificationBell} from './Notifications';
 
@@ -46,12 +48,31 @@ function UpdatesDot({userId}:{userId:string}){
   return useUnread(userId,latest)?<span className="dot" role="img" aria-label="New course updates"/>:null;
 }
 
+/** What the search box can open: every drawer page, and for each current class its Stream, Classwork, People and (teachers) Grades. */
+function commands(role:'admin'|'faculty'|'student',groups:{items:NavItem[]}[],classes:{id:string;code:string;title:string;open:boolean;active:boolean}[]):Command[]{
+  const pages:Command[]=groups.flatMap(g=>g.items).map(i=>({label:i.label,hint:'Page',to:i.to,icon:i.icon}));
+  const tabs:[string,string,IconName][]=role==='faculty'?[['Stream','stream','announcement'],['Classwork','classwork','material'],['People','people','people'],['Grades','gradebook','chart']]:[['Stream','stream','announcement'],['Classwork','classwork','material'],['People','people','people']];
+  const perClass=classes.filter(c=>c.open&&c.active).flatMap(c=>tabs.map(([label,seg,icon])=>({label:`${c.title} — ${label}`,hint:c.code,to:`/${role}/offerings/${c.id}/${seg}`,icon})));
+  return [...pages,...perClass];
+}
+
+/** The search box for teachers and students: loads their classes only while it is open. */
+function ClassFinder({role,self,onClose}:{role:'faculty'|'student';self:string;onClose:()=>void}){
+  const classes=useClasses(role,self);
+  return <CommandPalette commands={commands(role,navigation(role),classes.data??[])} onClose={onClose}/>;
+}
+
 export function Shell(){
   const ask=useConfirm();
   const {session,loading,error}=useAuth();const {theme,setTheme}=useTheme();
   const wide=()=>matchMedia('(min-width:1024px)').matches;
   const [open,setOpen]=useState(()=>{try{return wide()&&localStorage.getItem('learnsync:drawer')!=='closed'}catch{return wide()}});const [failure,setFailure]=useState('');
   const account=useRef<HTMLDetailsElement>(null);
+  const [finding,setFinding]=useState(false);
+  const [touring,setTouring]=useState(false);
+  const tourFor=useRef('');
+  useEffect(()=>{const id=session?.user?.id;if(id&&tourFor.current!==id){tourFor.current=id;if(shouldAutoTour(id))setTouring(true)}},[session?.user?.id]);
+  useEffect(()=>{const k=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setFinding(f=>!f)}};document.addEventListener('keydown',k);return()=>document.removeEventListener('keydown',k)},[]);
   const toggle=()=>{setOpen(!open);try{if(wide())localStorage.setItem('learnsync:drawer',open?'closed':'open')}catch{/* the choice still applies now */}};
   const menuButton=useRef<HTMLButtonElement>(null);
   // the phone menu is a disclosure: Escape closes it and gives focus back to the button that opened it
@@ -82,6 +103,7 @@ export function Shell(){
     <header className="header">
       <button ref={menuButton} className="menu" aria-label="Toggle navigation" aria-expanded={open} aria-controls="drawer" onClick={toggle}><Icon name="menu"/></button>
       <Link to={home} className="brand"><span className="mark" aria-hidden="true">L</span>LearnSync</Link>
+      <button type="button" className="search-btn" onClick={()=>setFinding(true)} aria-label="Quick find (Ctrl K)"><Icon name="search" size={20}/><span>Search</span><kbd aria-hidden="true">Ctrl K</kbd></button>
       <NotificationBell/>
       <details className="dropdown account" ref={account}>
         <summary aria-label={`Account menu for ${user.display_name}`}><span className="avatar" aria-hidden="true">{initials(user.display_name)}</span></summary>
@@ -89,6 +111,7 @@ export function Shell(){
           <div className="account-who"><span className="avatar big-avatar" aria-hidden="true">{initials(user.display_name)}</span><strong>{user.display_name}</strong><span className="muted">{ROLE_LABEL[user.role]}</span></div>
           <label className="theme-label">Theme<select value={theme} onChange={e=>void chooseTheme(e.target.value as 'system'|'light'|'dark')}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
           <Link className="button" to="/account" onClick={()=>{if(account.current)account.current.open=false}}>Account settings</Link>
+          <button type="button" onClick={()=>{if(account.current)account.current.open=false;setTouring(true)}}>Take the tour</button>
           <button onClick={logout}>Sign out</button>
         </div>
       </details>
@@ -106,6 +129,8 @@ export function Shell(){
       </nav>
     </aside>
     <main id="main" className="content">{failure&&<p role="alert" className="error">{failure}</p>}<Outlet/></main>
+    {touring&&<Tour role={user.role} userId={user.id} onClose={()=>setTouring(false)}/>}
+    {finding&&(classRole?<ClassFinder role={classRole} self={user.display_name} onClose={()=>setFinding(false)}/>:<CommandPalette commands={commands(user.role,navigation(user.role),[])} onClose={()=>setFinding(false)}/>)}
     {user.role==='student'&&<StudyBuddy userId={user.id}/>}
   </div>;
 }
