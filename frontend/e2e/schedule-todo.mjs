@@ -158,7 +158,7 @@ try{
   await S1.goto(`/student/offerings/${O}/classwork`);await S1.waitForLoadState('networkidle');await S1.getByRole('link',{name:'View your work'}).click();await S1.waitForURL(/\/your-work$/);
   await S1.getByRole('button',{name:/^Returned with grade/}).click();
   check('Your work lists the returned work with its grade',(await S1.locator('main').innerText()).includes('Reflection note')&&(await S1.locator('main').innerText()).includes('9.00 / 10.00'));
-  check('axe finds no violations on Your work',(await axe(S1)).length===0);
+  {const v=await axe(S1);check('axe finds no violations on Your work',v.length===0,JSON.stringify(v).slice(0,600))}
   await rp.goto(`/faculty/offerings/${O}/assessments/${rid}`);await rp.waitForLoadState('networkidle');
   check('axe finds no violations on the assignment page',(await axe(rp)).length===0);
   // ---- G: excusing (last, because an excused item no longer counts as returned)
@@ -167,6 +167,19 @@ try{
   check('the teacher can excuse a student from the work (kept out of their grade)',(await call(rp,'GET',`/teach/offerings/${O}/assessments/${rid}/scores`)).data.find(r=>r.student==='Demo student 1').excused===true);
   await S1.goto(`/student/offerings/${O}/work/${rid}`);await S1.waitForLoadState('networkidle');
   check('the excused student is told so and has nothing to do',(await S1.locator('aside[aria-label="Your work"]').innerText()).includes('Excused')&&await S1.getByRole('button',{name:'Mark as done'}).count()===0);
+
+  // ---- the teacher customizes the class look; the student sees it
+  const lk=await newPage(browser,{state:F});await lk.goto(`/faculty/offerings/${O}/stream`);await lk.waitForLoadState('networkidle');
+  await lk.getByRole('button',{name:'Customize'}).click();
+  await lk.locator('label.swatch',{hasText:'Red'}).click();await lk.locator('label.swatch.art',{hasText:'Hills'}).click();
+  await lk.getByRole('dialog').getByRole('button',{name:'Save'}).click();
+  await lk.getByRole('dialog').waitFor({state:'hidden'});await lk.waitForLoadState('networkidle');
+  check('the teacher’s colour and drawing show on the banner',await lk.locator('header.banner.art-2').count()===1&&await lk.locator('header.banner').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(197, 34, 31)');
+  await S1.goto('/student');await S1.waitForLoadState('networkidle');
+  check('the student’s class card has the same look',await S1.locator('.class-card .class-head.art-2').count()>=1);
+  await lk.getByRole('button',{name:'Customize'}).click();await lk.getByRole('button',{name:'Use the default'}).click();
+  await lk.getByRole('dialog').waitFor({state:'hidden'});await lk.waitForLoadState('networkidle');
+  check('Use the default clears the stored look',Object.keys((await call(lk,'GET','/me/class-themes')).data).length===0);
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

@@ -107,6 +107,9 @@ class Offering(Base):
     status: Mapped[str] = mapped_column(String(10), default="active")
     # class meeting days as a bitmask, Monday = 1 ... Sunday = 64; 0 = not set (the attendance grid has no prepared dates)
     meeting_days: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    # the teacher's pick of banner colour (0-9) and header drawing (0-5); empty = derived from the id
+    theme_color: Mapped[int | None] = mapped_column(SmallInteger)
+    theme_art: Mapped[int | None] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

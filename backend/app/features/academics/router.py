@@ -7,7 +7,7 @@ from app.db import get_db
 from app.errors import fail
 from app.security import current_account, require_role
 
-from . import commands, imports, queries
+from . import commands, imports, queries, themes
 from .schemas import (
     BulkOfferingInput,
     DraftSave,
@@ -16,6 +16,7 @@ from .schemas import (
     OfferingInput,
     OfferingUpdate,
     Reason,
+    ThemeInput,
     Revision,
     SchoolYearInput,
     SectionInput,
@@ -203,6 +204,16 @@ def my_offerings(actor=Depends(faculty), db: Session = Depends(get_db)):
 @router.get("/me/subjects")
 def my_subjects(actor=Depends(student), db: Session = Depends(get_db)):
     return queries.my_subjects(db, actor)
+
+
+@router.get("/me/class-themes")
+def class_themes(actor=Depends(current_account), db: Session = Depends(get_db)):
+    return themes.visible(db, actor)
+
+
+@router.put("/teach/offerings/{offering_id}/theme")
+def choose_theme(offering_id: UUID, data: ThemeInput, actor=Depends(faculty), db: Session = Depends(get_db)):
+    return themes.choose(db, actor, offering_id, data.color, data.art)
 
 
 # ---- reviewed imports (admin) ----

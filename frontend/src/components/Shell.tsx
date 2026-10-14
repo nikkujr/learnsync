@@ -8,7 +8,7 @@ import {useUnread} from './seen';
 import {StudyBuddy} from '../features/study/StudyBuddy';
 import {useConfirm} from './confirm';
 import {Icon,type IconName} from './Icon';
-import {classColor,initials,useClasses} from './classes';
+import {initials,useClasses,useLook} from './classes';
 import {NotificationBell} from './Notifications';
 
 type NavItem={to:string;label:string;icon:IconName;end?:boolean;dot?:boolean};
@@ -32,11 +32,11 @@ function navigation(role:'admin'|'faculty'|'student'):{label:string;items:NavIte
 
 /** The user's current classes under the drawer's Home group, each with its banner colour. */
 function ClassList({role,self}:{role:'faculty'|'student';self:string}){
-  const classes=useClasses(role,self);
+  const classes=useClasses(role,self);const look=useLook();
   const list=(classes.data??[]).filter(c=>c.open&&c.active);
   if(list.length===0)return null;
   return <div className="nav-group"><p className="nav-label">{role==='faculty'?'Teaching':'Enrolled'}</p>
-    {list.map(c=><NavLink key={c.id} to={`/${role}/offerings/${c.id}`} className="class-link"><span className="class-dot" style={{background:classColor(c.id)}} aria-hidden="true">{c.title[0]}</span>
+    {list.map(c=><NavLink key={c.id} to={`/${role}/offerings/${c.id}`} className="class-link"><span className="class-dot" style={{background:look(c.id).color}} aria-hidden="true">{c.title[0]}</span>
       <span className="class-link-text"><strong>{c.title}</strong><span>{c.code} · {c.section}</span></span></NavLink>)}</div>;
 }
 

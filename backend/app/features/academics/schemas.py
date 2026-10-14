@@ -40,6 +40,11 @@ class TermUpdate(BaseModel):
     end_date: date | None = None
 
 
+class ThemeInput(BaseModel):
+    color: int | None = None
+    art: int | None = None
+
+
 class Reason(BaseModel):
     reason: str = Field(min_length=3, max_length=1000)
 
