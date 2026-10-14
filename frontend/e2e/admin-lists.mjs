@@ -79,6 +79,26 @@ try{
   await p.getByRole('button',{name:'Assign subjects'}).click();await d.getByLabel('Teacher').selectOption({label:'Demo faculty 1'});await d.getByLabel('Filter subjects').fill('LST 101');
   check('a subject the teacher already has is shown as assigned and cannot be picked again',await d.getByRole('checkbox',{name:/LST 101/}).isDisabled());
   check('axe finds no violations on the bulk dialog',(await axe(p)).length===0);
+
+  // ---- accounts: a table with a menu per row; the dashboard tiles open filtered lists; the bell tells the admin about a report
+  await p.goto('/admin/accounts');await p.waitForLoadState('networkidle');
+  check('accounts are a table with name, email, role and status columns',await p.locator('table.accounts-table thead th').allInnerTexts().then(t=>['Name','Email','Role','Status'].every(x=>t.includes(x))));
+  const row=p.locator('table.accounts-table tbody tr',{hasText:'List Student 01'});
+  await row.locator('summary').click();
+  check('the row menu offers Resend invitation for an invited person',await row.getByRole('button',{name:'Resend invitation'}).isVisible());
+  await row.getByRole('button',{name:'Resend invitation'}).click();await p.getByText('Changes saved.').waitFor();
+  check('choosing an item closes the menu',!(await row.locator('details').evaluate(d=>d.open)));
+  await row.locator('summary').click();await p.keyboard.press('Escape');
+  check('Escape closes the menu',!(await row.locator('details').evaluate(d=>d.open)));
+  await p.goto('/admin');await p.waitForLoadState('networkidle');
+  await p.locator('.stats a',{hasText:'Active students'}).click();await p.waitForURL(/role=student&status=active/);
+  check('the Active students tile opens that filtered list',await p.getByLabel('Role').inputValue()==='student'&&await p.getByLabel('Status').inputValue()==='active');
+  const ST=await sessionFor(browser,'student1@example.com');const sp=await newPage(browser,{state:ST});await sp.goto('/student');
+  await call(sp,'POST','/issues',{type:'bug',title:'Blank page',description:'Nothing shows when I open it.'});
+  await p.goto('/admin');await p.waitForLoadState('networkidle');
+  await p.locator('summary[aria-label^="Notifications"]').click();
+  check('the admin bell shows the new report',await p.getByText('New report: Blank page').first().isVisible());
+  check('axe finds no violations on the accounts page',await (async()=>{await p.goto('/admin/accounts');await p.waitForLoadState('networkidle');return (await axe(p)).length===0})());
 }catch(e){console.log('SCRIPT ERROR:',e.message);results.push(false)}
 await browser.close();
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

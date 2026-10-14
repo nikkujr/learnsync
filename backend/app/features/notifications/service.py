@@ -19,6 +19,13 @@ def notify(db, recipient_ids, kind, title, link, offering=None, detail=""):
                             title=title[:200], detail=detail[:300], link=link[:300]))
 
 
+def notify_admins(db, kind, title, link, detail=""):
+    """Every active administrator."""
+    from app.features.accounts.models import Account
+    notify(db, db.scalars(select(Account.id).where(Account.role == "admin", Account.status == "active")).all(),
+           kind, title, link, None, detail)
+
+
 def notify_students(db, offering, section_ids, kind, title, link):
     """Every currently enrolled student the item is for (an empty section list means everyone)."""
     ids = [e.student_id for e in db.scalars(select(Enrollment).where(

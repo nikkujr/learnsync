@@ -158,3 +158,9 @@
   Not built (open): email notifications, comment banks, per-student or per-group targeting, rubrics.
 
 - 2026-10-13, human request ("just the icons and header images"): the app now has its own line-icon set (`components/Icon.tsx`, inline SVG, no icon font and no Google assets) in the drawer, bell, stream, Classwork rows, menus and compose pages, and each class gets one of six header drawings (`art-0` to `art-5`, chosen from its id like its colour) on its card and banner. Human feedback in the same round: a teacher row's ⋮ menu stays at the right edge and the content wraps around it.
+
+- 2026-10-14, human request ("go ahead", then "some elements are eating up the entire screen" in the gradebook): admin flow improvements and a compact gradebook.
+  1. User accounts is a table (name, email, role, status) with a ⋮ menu per row (Resend invitation or Send reset link, Deactivate or Activate, Hand over admin role); on phones each row stacks.
+  2. The admin Home tiles open the matching filtered list (Active students, Active faculty, Inactive accounts, Subjects); the accounts page reads `?role=` and `?status=`.
+  3. Administrators now get bell notices: a new report is filed, and an invited person accepts their invitation. Still in-app only.
+  4. Gradebook: the heading, policy sentence, "Ready to publish" panel and the two folded help sections no longer sit above the grid. One slim row holds the next period to publish (with "All periods"), one holds the filters and the student count, and the help text is one "Help" fold. On a 1280×800 screen the first score cell is now visible without scrolling.

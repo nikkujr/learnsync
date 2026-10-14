@@ -6,7 +6,7 @@ import {Icon,type IconName} from './Icon';
 import {queryClient} from '../app/providers';
 
 interface Note{id:string;kind:string;title:string;detail:string;link:string;at:string;read:boolean}
-const ICON:Record<string,IconName>={assigned:'activity',material:'material',announcement:'announcement',returned:'check',grade:'star',turned_in:'upload',comment:'comment'};
+const ICON:Record<string,IconName>={assigned:'activity',material:'material',announcement:'announcement',returned:'check',grade:'star',turned_in:'upload',comment:'comment',report:'help',accepted:'people'};
 const when=(iso:string)=>new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 
 /** The bell in the top bar: what was assigned, returned, published or said, newest first. It checks again every minute and when the tab is reopened. */

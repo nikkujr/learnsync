@@ -8,6 +8,8 @@ from app.errors import fail
 from app.features.accounts.commands import audit
 from app.features.accounts.models import Account, now
 
+from app.features.notifications import service as notifications
+
 from .models import IssueReport
 
 HOURLY_LIMIT = 10
@@ -54,6 +56,8 @@ def create(db, actor, data):
     issue = IssueReport(reporter_id=actor.id, type=data.type, title=data.title.strip(),
                         description=data.description.strip(), page=local_path(data.page))
     db.add(issue)
+    notifications.notify_admins(db, "report", f"New report: {issue.title}"[:200], "/admin/issues",
+                                f"{actor.display_name} · {data.type}")
     db.commit()
     return own_view(issue)
 

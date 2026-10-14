@@ -74,7 +74,7 @@ try{
 
   // ---- D: publication strip, review dialog, Course locked until both periods are out
   await page.reload();await page.getByRole('heading',{name:'Gradebook'}).waitFor();
-  check('the strip names the next period and what is ready',(await page.locator('#pub-h').locator('..').innerText()).includes('Midterm')&&/ready to publish/.test(await page.locator('#pub-h').locator('..').innerText()));
+  check('the strip names the next period and what is ready',(await page.locator('section.gb-bar').innerText()).includes('Midterm')&&/ready to publish/.test(await page.locator('section.gb-bar').innerText()));
   await page.locator('details.more summary',{hasText:'All periods'}).click();
   check('Publish Course is disabled until Midterm and Finals are published',await page.getByRole('button',{name:/^Publish Course/}).isDisabled());
   await page.getByRole('button',{name:/^Publish Midterm/}).click();

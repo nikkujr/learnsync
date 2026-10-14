@@ -349,3 +349,39 @@ button.icon-btn:hover{background:var(--surface-alt)}
 .row-main{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
 .row-main>.grow{flex:1 1 220px;min-width:0}
 .seq.compact li:has(>.row-main)>.row-menu{flex:none;margin-left:0}
+
+/* admin accounts table: one row per person, the actions in a ⋮ menu at the right */
+.accounts-table td.email{overflow-wrap:anywhere}
+.accounts-table td.row-actions{width:1%;text-align:right}
+.accounts-table .row-menu{display:inline-block}
+.accounts-table .menu-list{right:0;left:auto}
+@media (max-width:640px){
+  .accounts-table,.accounts-table tbody{display:block;min-width:0;width:100%}
+  .accounts-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .accounts-table tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name name menu" "email email menu" "role status menu";gap:2px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+  .accounts-table td{display:block;padding:0;border:0;min-width:0}
+  .accounts-table td:nth-child(1){grid-area:name}
+  .accounts-table td.email{grid-area:email}
+  .accounts-table td:nth-child(3){grid-area:role;color:var(--muted)}
+  .accounts-table td:nth-child(4){grid-area:status}
+  .accounts-table td.row-actions{grid-area:menu;width:auto}
+}
+
+/* gradebook: the grid comes first; publishing and filters are one slim row each */
+.gb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:0 0 8px;padding:4px 0}
+.gb-bar .gb-publish{flex:1 1 360px;margin:0;padding:0;list-style:none}
+.gb-bar .gb-publish li{border:0;padding:0;background:none}
+.gb-bar .more{flex:1 1 100%}
+.gb-main{margin:0}
+.gb-filters{display:flex;flex-wrap:wrap;align-items:end;gap:8px 16px;margin:0 0 8px}
+.gb-filters label{display:grid;gap:2px;font-size:.85rem}
+.gb-filters input,.gb-filters select{min-height:40px}
+.gb-help{flex:1 1 100%}
+.gb-filters input,.gb-filters select{min-height:44px}
+.gb-bar .gb-publish li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px}
+.gb-bar .gb-publish .grow{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px}
+.gb-bar .gb-publish button{width:auto}
+.gb-bar .more:not([open]),.gb-help:not([open]){flex:0 0 auto}
+.gb-bar .more>summary,.gb-help>summary{min-height:44px;padding:0 8px;border:0}
+.gb-bar .more[open],.gb-help[open]{flex:1 1 100%}
+.gb-filters .gb-help{margin-left:auto}

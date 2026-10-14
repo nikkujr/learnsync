@@ -160,7 +160,7 @@ export function AdminHome(){
             <Link state={here} className="button" to="/admin/subjects/import">Import a prospectus</Link></div></section>
           {attention?<Hero eyebrow="Needs your attention" title={attention.t} detail={attention.s} action={attention.a} to={attention.to} icon="!"/>
             :<Hero eyebrow="Needs your attention" title="Nothing needs attention" detail="No open reports, pending invitations or unconfirmed imports." icon="✓"/>}
-          <Stats items={[[d.accounts.students,'Active students'],[d.accounts.faculty,'Active faculty'],[d.accounts.inactive,'Inactive accounts'],[d.subjects,'Subjects in the catalog']]}/>
+          <Stats items={[[d.accounts.students,'Active students','/admin/accounts?role=student&status=active'],[d.accounts.faculty,'Active faculty','/admin/accounts?role=faculty&status=active'],[d.accounts.inactive,'Inactive accounts','/admin/accounts?status=inactive'],[d.subjects,'Subjects in the catalog','/admin/subjects']]}/>
           <section className="panel"><h2>Open terms</h2>
             {d.terms.length===0?<p className="muted">No term is open. Create a school year and its terms in academic setup.</p>:
               <div className="table-wrap" tabIndex={0} role="region" aria-label="Open terms"><table><thead><tr><th>Term</th><th>Sections</th><th>Offerings</th><th>Students</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>

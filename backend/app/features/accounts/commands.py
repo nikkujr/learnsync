@@ -91,6 +91,10 @@ def consume_token(db, data, purposes):
         account.ownership_generation += 1
     else:
         audit(db, account, f"account.{token.purpose}_accepted", "account", account.id)
+        if token.purpose == "invite":
+            from app.features.notifications import service as notifications
+            notifications.notify_admins(db, "accepted", f"{account.display_name} accepted their invitation",
+                                        f"/admin/accounts?role={account.role}", account.email)
     account.password_hash = passwords.hash(data.password)
     account.status = "active"
     account.email_verified_at = account.email_verified_at or now()

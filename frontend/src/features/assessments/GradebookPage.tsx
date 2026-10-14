@@ -85,12 +85,11 @@ export function GradebookPage(){
     <button className={p===next?'primary':''} disabled={closed||stats[p].ready===0||(p==='course'&&!courseUnlocked)} title={p==='course'&&!courseUnlocked?'Publish Midterm and Finals first':undefined} onClick={()=>setPublishing(p)}>Publish {PERIOD_LABEL[p]??p}…</button></li>;
 
   return <>
-    <div className="page-heading"><div><h2>Gradebook</h2>
-      <p className="muted">Working values: students see only the results you return and the grades you publish. Policy version {book.policy_version} · {book.policy.transmutation==='transmuted'?'transmuted':'raw'} scores · passing {book.policy.passing}.</p></div></div>
+    <h2 className="sr-only">Gradebook</h2>
     {message&&<p role="status">{message}</p>}
 
-    <section className="panel" aria-labelledby="pub-h"><h3 id="pub-h">Ready to publish</h3>
-      {next?<ul className="rows">{periodRow(next)}</ul>:<p className="muted">{periods.some(p=>stats[p].ready>0)?'Everything that is ready has been published.':'No grades are ready yet. They appear when all graded work for a period is scored.'}</p>}
+    <section className="gb-bar" aria-label="Publish grades">
+      {next?<ul className="rows gb-publish">{periodRow(next)}</ul>:<p className="muted gb-publish">{periods.some(p=>stats[p].ready>0)?'Everything that is ready has been published.':'No grades are ready to publish yet: they appear when all graded work for a period is scored.'}</p>}
       <details className="more"><summary>All periods{flaggedRows.length>0?` · ${flaggedRows.length} need review`:''}</summary>
         <ul className="rows">{periods.filter(p=>p!==next).map(periodRow)}</ul>
         {periods.includes('course')&&!courseUnlocked&&<p className="muted">The Course grade unlocks once Midterm and Finals have each been published.</p>}
@@ -98,13 +97,14 @@ export function GradebookPage(){
           <ul className="rows" aria-label="Grades needing review">{flaggedRows.map(r=><li key={r.student_id}><span className="grow"><strong>{r.display_name}</strong><span className="muted">{Object.entries(r.published).filter(([,p])=>p.needs_review).map(([k,p])=>`${PERIOD_LABEL[k]??k}: ${p.review_reason??'working data changed'}`).join(' · ')}</span></span><button onClick={()=>setDetail(r)}>Review</button></li>)}</ul></>}
       </details></section>
 
-    <section className="panel"><h3>Scores and grades</h3>
-      <details className="more"><summary>How to read this table</summary><p className="muted">— means pending (not scored yet). 0.00 is a real recorded zero. “Unreleased change” means the student still sees an older result. Grades and ranks to share or download are on the Class standing tab.</p></details>
-      <details className="more"><summary>Filter students</summary>
-        <div className="actions"><label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or student number"/></label>
-          <label>Section<select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
-          <label>Period<select value={only} onChange={e=>setOnly(e.target.value)}><option value="">All periods</option>{book.policy.periods.map(p=><option key={p.key} value={p.key}>{PERIOD_LABEL[p.key]??p.key}</option>)}</select></label></div></details>
-      <p className="muted" role="status">Showing {rows.length} of {book.rows.length} students.{closed?' This term is closed, so scores are read-only.':' Type a score in any cell: it saves when you press Enter or leave the cell. Enter moves down, Tab moves across, Esc undoes.'}{saving?' Saving…':''}</p>
+    <section className="gb-main">
+      <div className="gb-filters">
+        <label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or number"/></label>
+        <label>Section<select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
+        <label>Period<select value={only} onChange={e=>setOnly(e.target.value)}><option value="">All periods</option>{book.policy.periods.map(p=><option key={p.key} value={p.key}>{PERIOD_LABEL[p.key]??p.key}</option>)}</select></label>
+        <span className="muted" role="status">{rows.length} of {book.rows.length} students{closed?' · closed term, read-only':''}{saving?' · Saving…':''}</span>
+        <details className="more gb-help"><summary>Help</summary><p className="muted">Type a score in any cell: it saves when you press Enter or leave the cell. Enter moves down, Tab moves across, Esc undoes. Scores are working values: students see only the results you return and the grades you publish (policy version {book.policy_version} · {book.policy.transmutation==='transmuted'?'transmuted':'raw'} scores · passing {book.policy.passing}). — means pending; 0.00 is a real recorded zero. “Unreleased change” means the student still sees an older result. Grades and ranks to share or download are on the Class standing tab.</p></details>
+      </div>
       <div className="table-wrap gradebook" role="region" aria-label="Gradebook, scrolls sideways" tabIndex={0}><table>
         <thead>
           <tr><th className="sticky">Student</th>{shown.filter(p=>p!=='course').map(p=><th key={p} colSpan={byPeriod(p).length+1}>{PERIOD_LABEL[p]??p}</th>)}<th>Course</th></tr>

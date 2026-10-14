@@ -90,3 +90,12 @@ def test_a_student_can_take_a_turn_in_back_until_it_is_graded(graded):
     assert st1.post(la(graded, f"/assessments/{done}/mark-done"), {}).status_code == 201
     assert st1.post(la(graded, f"/assessments/{done}/unsubmit")).status_code == 204
     assert st1.post(la(graded, f"/assessments/{done}/mark-done"), {}).status_code == 201
+
+
+def test_administrators_are_told_about_new_reports(world):
+    admin, student = Api("admin@example.com"), Api("s1@example.com")
+    before = mine(admin)["unread"]
+    assert student.post("/api/issues", {"type": "bug", "title": "Blank page", "description": "Nothing shows when I open it."}).status_code == 201
+    assert any(t == "New report: Blank page" for t in titles(admin, "report"))
+    assert mine(admin)["unread"] == before + 1
+    assert titles(student, "report") == []
