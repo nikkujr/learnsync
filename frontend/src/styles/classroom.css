@@ -449,3 +449,9 @@ main>*{animation:fadein .25s var(--ease)}
 .home-today span{color:var(--muted);font-size:.8rem;grid-column:2}
 .class-body .bar-track{height:6px;border-radius:3px}
 @media (max-width:640px){.home-today ul{display:grid;grid-template-columns:repeat(3,1fr);width:100%}.home-today li>a,.home-today li>div{min-width:0;padding:8px 10px;column-gap:8px}.home-today strong{font-size:1.2rem}}
+
+/* sign-in: the brand panel and the form are one connected card */
+.auth{gap:0}
+.auth-brand{border-radius:20px 0 0 20px;box-shadow:-8px 12px 40px rgba(15,40,60,.22);background:#f8fbfd;border-right:1px solid #dbe5ec}
+.auth-card{border-radius:0 20px 20px 0;box-shadow:8px 12px 40px rgba(15,40,60,.22);border-left:0}
+@media(max-width:760px){.auth{gap:0}.auth-brand{border-radius:20px 20px 0 0;border-right:0;border-bottom:1px solid #dbe5ec;box-shadow:0 -6px 30px rgba(15,40,60,.2)}.auth-card{border-radius:0 0 20px 20px;box-shadow:0 12px 40px rgba(15,40,60,.22)}}
