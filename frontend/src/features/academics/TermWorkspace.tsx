@@ -61,7 +61,7 @@ export function TermWorkspace(){
         sections.data.length===0?<Empty icon="people" title="No sections yet">Sections are the groups of students, such as BSE 1-A.</Empty>:
         <div className="table-wrap"><table><caption className="sr-only">Sections of this term</caption>
           <thead><tr><th scope="col">Section</th><th scope="col">Year level</th><th scope="col">Students</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
-          <tbody>{sections.data.map(s=><tr key={s.id}><th scope="row"><Link state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{s.name}</Link></th><td>{yearLabel(s.year_level)}</td><td>{s.member_count}</td>
+          <tbody>{sections.data.map(s=><tr key={s.id}><th scope="row"><Link state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{s.name}</Link></th><td>{yearLabel(s.year_level)}</td><td><span className="member-bar"><span>{s.member_count}</span><i aria-hidden="true" style={{width:`${(s.member_count/Math.max(1,...sections.data.map(x=>x.member_count)))*100}%`}}/></span></td>
             <td><Link className="button" state={here} to={`/admin/terms/${termId}/sections/${s.id}/students`}>{closed?'View students':'Manage students'}</Link></td></tr>)}</tbody></table></div>}
     </section>
 

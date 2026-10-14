@@ -46,6 +46,29 @@ def week_strip(db, student):
     return {"days": days, "lessons_today": counts[today]["lessons"], "work_today": counts[today]["work"]}
 
 
+BADGES = [("first_lesson", "First lesson", "Complete a lesson"), ("bookworm", "Bookworm", "Complete 10 lessons"),
+          ("quiz_taker", "Quiz taker", "Submit a quiz"), ("hand_in", "Hand-in hero", "Turn in 2 activities"),
+          ("streak3", "On a roll", "Learn 3 days in a row")]
+
+
+def streak_and_badges(db, student):
+    """Days in a row with a valid learning event (still alive until the end of today) and the badges earned from the same events."""
+    days, totals = set(), {"lesson_completed": 0, "quiz_submitted": 0, "activity_submitted": 0}
+    for event_type, at in db.execute(select(LearningEvent.event_type, LearningEvent.occurred_at).where(LearningEvent.student_id == student.id)):
+        days.add(progress.local(at).date())
+        totals[event_type] += 1
+    day = progress.local(now()).date()
+    if day not in days:
+        day -= timedelta(days=1)
+    streak = 0
+    while day in days:
+        streak += 1
+        day -= timedelta(days=1)
+    earned = {"first_lesson": totals["lesson_completed"] >= 1, "bookworm": totals["lesson_completed"] >= 10,
+              "quiz_taker": totals["quiz_submitted"] >= 1, "hand_in": totals["activity_submitted"] >= 2, "streak3": streak >= 3}
+    return streak, [{"key": k, "label": label, "hint": hint, "earned": earned[k]} for k, label, hint in BADGES]
+
+
 def work_buckets(db, student, offering, enrollment, subject):
     """(to do, awaiting feedback, another attempt, missing, done) for one offering, from the learner's own view of it."""
     todo, waiting, again, missing, done = [], [], [], [], []
@@ -140,6 +163,7 @@ def student_dashboard(db, student):
         first = available[0]
         next_lesson = {"type": "work", "offering_id": first["offering_id"], "title": first["title"], "subject": first["subject"],
                        "link": f"/student/offerings/{first['offering_id']}/work/{first['assessment_id']}"}
-    return {"name": student.display_name, "subjects": subjects, "week": week_strip(db, student),
+    streak, badges = streak_and_badges(db, student)
+    return {"name": student.display_name, "subjects": subjects, "week": week_strip(db, student), "streak": streak, "badges": badges,
             "next_step": next_lesson, "todo": todo[:10], "todo_total": len(todo), "awaiting_feedback": waiting[:6],
             "another_attempt": again[:6], "updates": updates[:MAX_UPDATES]}

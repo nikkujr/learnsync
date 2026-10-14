@@ -1,3 +1,4 @@
+import {LessonReader} from '../../components/LessonReader';
 import {Loading} from '../../components/Loading';
 import {useState} from 'react';
 import {Link,useLocation,useOutletContext,useParams} from 'react-router-dom';
@@ -99,7 +100,7 @@ export function StudentLesson(){
   const i=query.data;
   const nextLabel=(k?:string)=>k==='file'?'Next file':k==='reference'?'Next link':'Next lesson';
   return <><article className="panel"><p className="back"><Link to={back}>← Back to {origin.label}</Link></p><h2>{i.title}</h2>
-    {i.kind==='lesson'&&<div className="rich-content" dangerouslySetInnerHTML={{__html:i.body_html??''}}/>}
+    {i.kind==='lesson'&&<LessonReader html={i.body_html??''}/>}
     {i.kind==='file'&&i.file&&<FileCard file={i.file}/>}
     {i.kind==='reference'&&<LinkCard url={i.reference_url} note={i.reference_note}/>}
     <div className="actions">{i.completed?<span className="badge covered">✓ You marked this {word} complete</span>:<button className="primary" disabled={marking} onClick={complete}>Mark {word} as complete</button>}{i.kind==='lesson'&&<Link className="button" to={`/student/offerings/${offeringId}/study`}>Ask study help</Link>}</div>

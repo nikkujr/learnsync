@@ -104,6 +104,7 @@ export function GradebookPage(){
         <label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or number"/></label>
         <label>Section<select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sections.map(s=><option key={s} value={s}>{s}</option>)}</select></label>
         <label>Period<select value={only} onChange={e=>setOnly(e.target.value)}><option value="">All periods</option>{book.policy.periods.map(p=><option key={p.key} value={p.key}>{PERIOD_LABEL[p.key]??p.key}</option>)}</select></label>
+        <span className="heat-legend" aria-hidden="true"><i className="heat-3"/>90+<i className="heat-2"/>75–89<i className="heat-1"/>60–74<i className="heat-0"/>below 60</span>
         <span className="muted" role="status">{rows.length} of {book.rows.length} students{closed?' · closed term, read-only':''}{saving?' · Saving…':''}</span>
         <details className="more gb-help"><summary>Help</summary><p className="muted">Type a score in any cell: it saves when you press Enter or leave the cell. Enter moves down, Tab moves across, Esc undoes. Scores are working values: students see only the results you return and the grades you publish (policy version {book.policy_version} · {book.policy.transmutation==='transmuted'?'transmuted':'raw'} scores · passing {book.policy.passing}). — means pending; 0.00 is a real recorded zero. “Unreleased change” means the student still sees an older result. Grades and ranks to share or download are on the Class standing tab.</p></details>
       </div>
@@ -115,7 +116,7 @@ export function GradebookPage(){
             <th>Grade</th></tr></thead>
         <tbody>{rows.map((r,rowIndex)=><tr key={r.student_id}>
           <th className="sticky" scope="row"><span className="person-cell"><span className="avatar" aria-hidden="true">{initials(r.display_name)}</span><span><button className="linklike" onClick={()=>setDetail(r)}>{r.display_name}</button><br/><span className="muted">{r.section??''}{r.grades.course?.grade!=null?` · Overall ${fmt(r.grades.course.grade)}`:''}</span>{r.grades.course?.grade!=null&&<GradeBar value={Number(r.grades.course.grade)}/>}</span></span></th>
-          {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id}><CellView cell={r.cells[c.id]} kind={c.kind} deadline={c.deadline} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
+          {shown.filter(p=>p!=='course').flatMap(p=>[...byPeriod(p).map(c=><td key={c.id} className={heat(r.cells[c.id],c.max_points)}><CellView cell={r.cells[c.id]} kind={c.kind} deadline={c.deadline} column={c.title} student={r.display_name} editing={editing&&editable(c.kind,r.cells[c.id])} value={edits[cellKey(c.id,r.student_id)]} problem={rejected[cellKey(c.id,r.student_id)]}
             onType={v=>typeScore(c.id,r.student_id,r.cells[c.id],v)} nav={{col:c.id,row:rowIndex}}
             onCommit={()=>void commit(c.id,r.student_id)} onRevert={()=>revert(c.id,r.student_id)} onMove={d=>focusCell(c.id,rowIndex+d)}/></td>),
             <td key={p+'g'}><GradeCell row={r} period={p} onReview={setDetail}/></td>])}
@@ -145,6 +146,12 @@ function PublishDialog({offeringId,period,stats,onClose,onPublished}:{offeringId
     {error&&<p role="alert">{error}</p>}
     <div className="actions"><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy||stats.changes===0} onClick={go}>{busy?'Publishing…':stats.changes===0?'Nothing new to publish':`Publish ${stats.changes} grade${stats.changes===1?'':'s'}`}</button></div></Dialog>;
 }
+
+/** A soft tint by how much of the points a student earned; the number is always shown too. */
+const heat=(cell:Cell|undefined,max:number|string)=>{
+  const m=Number(max);if(!cell||cell.score===null||cell.excused||!(m>0))return undefined;
+  const p=Number(cell.score)/m*100;return `heat heat-${p>=90?3:p>=75?2:p>=60?1:0}`;
+};
 
 function CellView({cell,kind,deadline,column,student,editing,value,problem,onType,nav,onCommit,onRevert,onMove}:{cell?:Cell;kind:string;deadline?:string|null;column:string;student:string;editing:boolean;value?:string;problem?:string;onType:(v:string)=>void;nav:{col:string;row:number};onCommit:()=>void;onRevert:()=>void;onMove:(delta:number)=>void}){
   if(!cell)return <span className="muted" title="Does not apply to this student's section">n/a</span>;

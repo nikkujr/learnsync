@@ -7,7 +7,8 @@ import {ApiError,api} from '../../app/api';
 import {useHere} from '../../components/origin';
 import type {OfferingSummary} from '../academics/types';
 import {ExportPanel} from '../exports/ExportPanel';
-import {PERIOD_LABEL,fmt} from './types';
+import {PERIOD_LABEL,fmt,type Gradebook} from './types';
+import {BarList} from '../../components/Charts';
 import {GradeBar,Distribution} from '../../components/GradeBar';
 
 interface Standing{banner:string|null;meta:[string,string][];notes:string[];columns:string[];rows:(string|number|null)[][];student_ids:string[];
@@ -21,6 +22,7 @@ export function ClassStandingPage(){
   const [section,setSection]=useState('');const [find,setFind]=useState('');
   const query=useQuery({queryKey:['class-standing',offering.id,period,basis,section],placeholderData:previous=>previous,
     queryFn:()=>api<Standing>(`/teach/offerings/${offering.id}/class-standing?${new URLSearchParams({period,basis,...(section?{section_id:section}:{})})}`)});
+  const book=useQuery({queryKey:['gradebook',offering.id],queryFn:()=>api<Gradebook>(`/teach/offerings/${offering.id}/gradebook`)});
   const periods=['midterm','finals','course'];
   const d=query.data;
   const grade=d?d.columns.length-3:0;   // columns: Rank, Student no., Name, Section, criteria…, [Policy version], Grade, Remark, Status
@@ -41,6 +43,9 @@ export function ClassStandingPage(){
         <p role="status"><strong>{d.ranking.ranked} ranked</strong> · {d.ranking.unranked} awaiting {basis==='published'?'publication':'calculation'}{d.ranking.ranked>0&&<> · average {fmt(d.ranking.average)} · highest {fmt(d.ranking.highest)} · lowest {fmt(d.ranking.lowest)} · {d.ranking.passed} passed <span className="muted">(of the {d.ranking.ranked} ranked)</span></>}</p>
         <p className="muted">Ties share a rank (1, 2, 2, 4). A student without a {basis==='published'?'published':'complete'} grade is not ranked, which is different from a grade of zero. Search only filters this list; it never changes a rank.{mixed&&' Releases here were made under different grading policy versions and are ranked as recorded.'}</p>
         {d.ranking.ranked>0&&<Distribution title={`${PERIOD_LABEL[period]??period} grades of ${d.ranking.ranked} ranked students`} values={d.rows.map(r=>r[grade]).filter((v):v is number=>typeof v==='number')}/>}
+        {book.data&&<BarList title="Class average by assessment" rows={book.data.columns.filter(c=>c.include_in_grade&&Number(c.max_points)>0).map(c=>{
+          const scores=book.data.rows.map(r=>r.cells[c.id]?.score).filter((v):v is number=>typeof v==='number');
+          return {label:c.title,value:scores.length?scores.reduce((a,v)=>a+v,0)/scores.length/Number(c.max_points)*100:null,note:`${scores.length} of ${book.data.rows.length} scored`}})}/>}
         <label>Find a student<input type="search" value={find} onChange={e=>setFind(e.target.value)} placeholder="Name or student number"/></label>
         {rows.length===0?<Empty icon="people" title="No students match">Try a different name or number.</Empty>:
         <div className="table-wrap" role="region" tabIndex={0} aria-label="Class standing, scrolls sideways"><table>

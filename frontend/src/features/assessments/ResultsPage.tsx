@@ -1,3 +1,4 @@
+import {TrendLine} from '../../components/Charts';
 import {Loading} from '../../components/Loading';
 import {useOutletContext} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -19,6 +20,7 @@ export function ResultsPage(){
         <p className="big">{fmt(g.grade)}</p><p><span className="badge">{g.remark==='passed'?'Passed':'Below passing'}</span></p>
         <p className="muted">Published {when(g.published_at)}{g.release_number>1?` · updated (version ${g.release_number})`:''}</p></article>)}</div>}
     <h3>Released assessment results</h3>
+    {results.length>=2&&<section className="panel"><TrendLine title="Your latest released scores" points={[...results].sort((a,b)=>a.released_at<b.released_at?-1:1).slice(-10).map(r=>({label:r.title,value:r.max_points>0?r.score/r.max_points*100:0}))}/></section>}
     {results.length===0?<section className="panel"><p>Nothing has been released yet. Quiz totals appear here as soon as you submit; other results appear when your teacher releases them.</p></section>:
       <section className="panel"><div className="table-wrap" role="region" aria-label="Released results" tabIndex={0}><table>
         <thead><tr><th>Assessment</th><th>Score</th><th>Feedback</th><th>Released</th></tr></thead>

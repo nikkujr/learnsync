@@ -1,3 +1,4 @@
+import {Ring} from '../../components/Ring';
 import {Sparkline} from '../../components/Sparkline';
 import {Icon,type IconName} from '../../components/Icon';
 import {Empty} from '../../components/Empty';
@@ -35,6 +36,7 @@ function Hero({eyebrow,title,detail,action,to,icon}:{eyebrow:string;title:string
 export interface Work{excused?:boolean;result?:{score:number;max_points:number}|null;late_allowed?:boolean;offering_id:string;assessment_id:string;kind:string;title:string;subject:string;deadline:string|null;available_from?:string|null;state?:string;attempts_left?:number}
 interface StudentHomeData{name:string;subjects:{offering_id:string;code:string;title:string;percent:number|null;done:number;total:number;to_do:number}[];
   week:{days:{label:string;date:string;count:number;today:boolean;future:boolean}[];lessons_today:number;work_today:number};
+  streak:number;badges:{key:string;label:string;hint:string;earned:boolean}[];
   next_step:{type:string;title:string;subject:string;link:string}|null;todo:Work[];todo_total:number;awaiting_feedback:Work[];another_attempt:Work[];
   updates:{type:string;title:string;subject:string;at:string;link:string}[]}
 const UPDATE_LABEL:Record<string,string>={announcement:'Announcement',material:'New material',result:'Result',grade:'Grade'};
@@ -55,17 +57,20 @@ export function StudentHome(){
     return <>
       <h1 className="sr-only">Home</h1>
       <Today name={session?.user?.display_name??''} line={`${plural(d.subjects.length,'class','classes')} this term`} tiles={[
-        {icon:'todo',n:d.subjects.reduce((n,x)=>n+x.to_do,0),label:'to do',to:'/student/todo'},{icon:'calendar',n:soon.length,label:'due soon',to:'/student/todo'},{icon:'book',n:d.subjects.length,label:'classes',to:'/student/subjects'}]}/>
+        {icon:'todo',n:d.subjects.reduce((n,x)=>n+x.to_do,0),label:'to do',to:'/student/todo'},{icon:'calendar',n:soon.length,label:'due soon',to:'/student/todo'},{icon:'flame',n:d.streak,label:d.streak===1?'day streak':'day streak',to:undefined}]}/>
       {soon.length>0&&<section className="due-soon" aria-labelledby="soon-h"><div className="section-head"><h2 id="soon-h">Due soon</h2><Link state={here} to="/student/todo">View to-dos</Link></div>
         <ul className="soon-list">{soon.map(w=><li key={w.assessment_id}><Link state={here} to={workLink(w)}><strong>{w.title}</strong><span className="muted">{w.subject} · due {dateTime(w.deadline!)}</span></Link></li>)}</ul></section>}
       <section aria-labelledby="subjects-h"><h2 id="subjects-h" className="sr-only">Your classes</h2>
         {d.subjects.length===0?<section className="panel"><Empty icon="school" title="No classes yet">You are not enrolled in a current subject. Once you are placed in a section, your classes appear here.</Empty></section>:<div className="class-grid">{d.subjects.map(s=>{const c=teachers.get(s.offering_id);
           return <SubjectCard key={s.offering_id} id={s.offering_id} title={s.title} section={c?.section??s.code} teacher={c?.teacher??''} meta={s.to_do?plural(s.to_do,'item')+' to do':'Nothing to do'}
-            progress={s.percent} detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Your work',`/student/offerings/${s.offering_id}/your-work`]]}/>})}</div>}</section>
+            progress={s.percent} ring detail={s.total?`${s.done} of ${s.total} steps done`:'No lessons or work yet'} to={`/student/offerings/${s.offering_id}/stream`} links={[['Classwork',`/student/offerings/${s.offering_id}/classwork`],['Your work',`/student/offerings/${s.offering_id}/your-work`]]}/>})}</div>}</section>
       <div className="dash-grid home-more">
         <div className="dash-main">
           {d.next_step?<Hero eyebrow={d.next_step.type==='lesson'?'Your next step':'Your next task'} title={d.next_step.title} detail={d.next_step.subject} action={d.next_step.type==='lesson'?'Continue learning':'Open work'} to={d.next_step.link} icon="▤"/>
             :<Hero eyebrow="Your next step" title="You’re up to date" detail={d.subjects.length?'Nothing is waiting for you right now. New lessons and work appear here when your teacher publishes them. You can review your subjects or ask study help about what you have learned.':'You are not enrolled in a current subject yet.'} action={d.subjects.length?'See my subjects':undefined} to="/student/subjects" icon="✓"/>}
+          <section className="panel" aria-labelledby="ach-h"><h2 id="ach-h">Achievements</h2>
+            <p className="muted">{d.badges.filter(b=>b.earned).length} of {d.badges.length} earned. They come from lessons you complete and work you turn in.</p>
+            <ul className="badges">{d.badges.map(b=><li key={b.key} className={b.earned?'earned':''}><span className="badge-ico" aria-hidden="true"><Icon name={b.earned?'award':'lock'} size={22}/></span><strong>{b.label}</strong><span className="muted">{b.earned?'Earned':b.hint}</span></li>)}</ul></section>
           <section className="panel"><h2>Learning activity this week</h2>
             <p className="muted">Lessons, files and links you marked complete and quizzes or activities you submitted. Opening or reading something does not count.</p>
             <ol className="week" aria-label="Activity by day this week">{d.week.days.map(day=>
@@ -91,15 +96,16 @@ export function StudentHome(){
 }
 
 /** A Classroom-style class card: coloured header with title, section and teacher, a round avatar, a short body and shortcuts. The whole header opens the class. */
-export function SubjectCard({id,title,section,teacher,meta,progress,activity,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;activity?:number[];detail?:string;to:string;links:[string,string][]}){
+export function SubjectCard({id,title,section,teacher,meta,progress,ring,activity,detail,to,links}:{id:string;title:string;section:string;teacher:string;meta?:string;progress?:number|null;ring?:boolean;activity?:number[];detail?:string;to:string;links:[string,string][]}){
   const here=useHere();
   const look=useLook()(id);
   return <article className="class-card" style={{'--cc':look.color} as React.CSSProperties}>
     <div className={`class-head ${look.art}`}><h3><Link state={here} to={to}>{title}</Link></h3><p>{section}</p>{teacher&&<p>{teacher}</p>}</div>
     <span className="class-avatar" aria-hidden="true">{initials(teacher||title)}</span>
     <div className="class-body">{meta&&<p><strong>{meta}</strong></p>}
-      {progress!==undefined&&progress!==null&&<div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div>}
-      {detail&&<p>{detail}</p>}
+      {ring&&progress!==undefined&&progress!==null&&<div className="ring-row"><Ring value={progress} label={`${title} progress`}/><div>{detail&&<p>{detail}</p>}</div></div>}
+      {!ring&&progress!==undefined&&progress!==null&&<div className="bar-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${title} progress`}><span style={{width:`${progress}%`}}/></div>}
+      {detail&&!ring&&<p>{detail}</p>}
       {activity&&<Sparkline values={activity} label={`${title} activity`}/>}</div>
     <div className="class-foot">{links.map(([l,h])=><Link key={h} state={here} to={h}>{l}</Link>)}</div></article>;
 }
@@ -108,7 +114,7 @@ export function SubjectCard({id,title,section,teacher,meta,progress,activity,det
 function Today({name,line,tiles}:{name:string;line:string;tiles:{icon:IconName;n:number;label:string;to?:string}[]}){
   const here=useHere();const hour=new Date().getHours();
   const hello=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
-  return <section className="home-today" aria-label="Today"><div><h2>{hello}, {name.split(' ')[0]}</h2><p className="muted">{line}</p></div>
+  return <section className="home-today" aria-label="Today"><div><h2>{hello}, {name.replace(/^(prof|dr|mr|ms|mrs)\.?\s+/i,'').split(' ')[0]}</h2><p className="muted">{line}</p></div>
     <ul>{tiles.map(t=><li key={t.label} className={t.n>0?'has':''}>{t.to&&t.n>0?<Link state={here} to={t.to}><Icon name={t.icon} size={22}/><strong>{t.n}</strong><span>{t.label}</span></Link>:<div><Icon name={t.icon} size={22}/><strong>{t.n}</strong><span>{t.label}</span></div>}</li>)}</ul></section>;
 }
 

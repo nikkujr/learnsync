@@ -125,7 +125,7 @@ export function FacultyClasswork(){
   const closeMenu=(e:React.MouseEvent<HTMLElement>)=>{(e.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open')};
   const created=(to:string)=>{setCreate(null);queryClient.invalidateQueries({queryKey:['items',offering.id]});queryClient.invalidateQueries({queryKey:['assessments',offering.id]});navigate(to)};
 
-  const stranded=rows.find(r=>r.type==='item'&&r.anchor&&!known.has(r.anchor));   // its topic left the syllabus: fix it before reordering
+  const stranded=rows.find(r=>r.type==='item'&&!r.archived&&r.anchor&&!known.has(r.anchor));   // its topic left the syllabus: fix it before reordering
   const count=(k:'all'|'published'|'draft')=>rows.filter(r=>(cat==='all'||r.cat===cat)&&(archived||!r.archived)&&byStatus(r,k)).length;
   const branch=(n:TNode<Row>,depth:number):React.ReactElement=>{
     const Heading=(['h3','h4','h5'] as const)[Math.min(depth,2)];

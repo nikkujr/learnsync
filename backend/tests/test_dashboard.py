@@ -244,3 +244,16 @@ def test_the_teacher_home_carries_a_seven_day_activity_line_per_subject(graded):
     aid = make_manual(graded, "activity", "Busy week", points="10", category_key="activity", deadline=iso(24))
     assert submit_pdf(graded["st1"], graded, aid).status_code == 201
     assert len(card()["activity"]) == 7 and card()["activity"][-1] == 1            # today is the last day
+
+
+def test_the_student_home_carries_a_streak_and_badges_from_valid_events(graded):
+    from test_activities import submit_pdf
+    from test_assessments import iso, make_manual
+    st1 = graded["st1"]
+    home = lambda: st1.get("/api/dashboard/student").json()
+    assert home()["streak"] == 0 and not any(b["earned"] for b in home()["badges"]) and len(home()["badges"]) == 5
+    aid = make_manual(graded, "activity", "First hand-in", points="10", category_key="activity", deadline=iso(24))
+    assert submit_pdf(st1, graded, aid).status_code == 201
+    assert home()["streak"] == 1                                                   # today counts
+    earned = {b["key"] for b in home()["badges"] if b["earned"]}
+    assert earned == set()                                                         # one activity is not yet "Hand-in hero"

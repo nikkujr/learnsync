@@ -177,3 +177,11 @@
   5. Spacing tokens `--space-1..7`; more empty states with a drawing; the page-fade animation was dropped because it made contrast checks read half-faded colours.
   6. Search (Ctrl K or ⌘ K, or the Search button): jump to any drawer page or to a class's Stream, Classwork, People or Grades. Client side only, from data the app already loads.
   7. Welcome tour for each role (five short steps): starts by itself the first time someone signs in on a browser (never under automated browsers), and any time from the account menu ("Take the tour").
+
+- 2026-10-14, human request ("go with your recommendation" for more aesthetics for the judges):
+  1. A believable showcase dataset: `backend/tools/seed_showcase.py` (development only, refuses elsewhere and refuses to run twice) renames the demo accounts to realistic names, hides (archives, never deletes) the clutter that browser tests left in the five demo classes, then builds real syllabi, lessons, quizzes, activities, an exam, announcements, student progress, scores, released results and published midterm grades through the app's own API. A database dump taken before it ran is in `var/dev-before-showcase.dump` (git-ignored); `var/restore-dev.sh` restores it.
+  2. Gradebook cells are tinted by the share of points earned (90+, 75-89, 60-74, below 60), with a legend; the number is always shown.
+  3. Charts: class average by assessment on Class standing, a "latest scores" trend line on the student's Grades & results, and a members bar per section in the term workspace. Each chart has a spoken text equivalent.
+  4. Students get progress rings on class cards, a day streak tile (days in a row with a valid learning event, alive until the end of today) and an Achievements panel of five badges (First lesson, Bookworm, Quiz taker, Hand-in hero, On a roll) earned from the same events. They are shown as encouragement, never as grades or ranks.
+  5. The lesson reader: reading time, a reading-progress line, an outline of the lesson's headings that follows the scroll (hidden on phones), and callout styling for quoted tips.
+  6. The Classwork "cannot be reordered" notice now ignores archived items.

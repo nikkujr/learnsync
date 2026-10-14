@@ -104,7 +104,7 @@ try{
   check('the work page offers Mark as done and no file upload',await S1.getByRole('button',{name:'Mark as done'}).count()===1&&await S1.locator('input[type=file]').count()===0);
   await S1.goto('/student');await S1.waitForLoadState('networkidle');await S1.getByRole('heading',{name:'Due soon'}).waitFor({timeout:8000}).catch(()=>{});      // while the work is still open
   check('the student Home has a Due soon strip above the class cards',await S1.getByRole('heading',{name:'Due soon'}).count()===1);
-  check('axe finds no violations on the student Home',(await axe(S1)).length===0);
+  {const v=await axe(S1);check('axe finds no violations on the student Home',v.length===0,JSON.stringify(v).slice(0,700))}
   await S1.goBack();await S1.getByRole('button',{name:'Mark as done'}).waitFor();
   await S1.getByLabel('Note for your teacher').fill('Finished in class');
   await S1.getByRole('button',{name:'Mark as done'}).click();await S1.getByText('Marked as done. Your teacher can see it now.').first().waitFor();
@@ -122,7 +122,7 @@ try{
   await S1.locator('summary[aria-label^="Notifications"]').click();
   check('and the notice names the assignment',(await S1.locator('.bell-list').innerText()).includes('Reflection note'));
   await S1.keyboard.press('Escape');
-  check('axe finds no violations on the mark-as-done page',(await axe(S1)).length===0);
+  {const v=await axe(S1);check('axe finds no violations on the mark-as-done page',v.length===0,JSON.stringify(v).slice(0,700))}
   await rp.goto(`/faculty/offerings/${O}/assessments/${rid}/scores`);await rp.waitForLoadState('networkidle');await rp.waitForTimeout(500);
   check('the teacher sees the work as marked done, with the comment, and nothing to preview',(await rp.locator('.grade-sub').innerText()).includes('Marked as done')&&(await rp.locator('.grade-sub').innerText()).includes('Finished in class')&&await rp.locator('iframe.file-frame').count()===0);
   await shot(rp,'grading-marked-done',false);

@@ -85,3 +85,6 @@ No new endpoint: `PUT /api/teach/offerings/{id}/attendance` has always been a PA
 ## Class themes and the activity line (2026-10-14)
 - Migration `e1b4c6d8f203`: `offering.theme_color` and `offering.theme_art` (small integers, null = derived). `GET /api/me/class-themes` returns `{offering_id: {color, art}}` for the classes the caller teaches or is enrolled in (all for an admin) where a look was chosen; `PUT /api/teach/offerings/{id}/theme` `{color, art}` (the offering's own teacher; 422 outside 0-9 and 0-5; allowed in a closed term). The limits live in `academics/themes.py` and `components/classes.tsx`.
 - `GET /api/dashboard/faculty`: each subject carries `activity`, seven daily counts (oldest first, today last) of valid learning events for that offering.
+
+## Streak and badges (2026-10-14)
+`GET /api/dashboard/student` also returns `streak` (consecutive local days up to today, or up to yesterday while today has no event yet) and `badges` (`key`, `label`, `hint`, `earned`), computed from the student's own `learning_event` rows only (`dashboard/student.py: streak_and_badges`). No schema change.
